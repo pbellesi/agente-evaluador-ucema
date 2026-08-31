@@ -140,7 +140,7 @@ Que se respete la estructura obligatoria de la consigna y que un tercero (person
 - Las tres corridas deben poder reconstruirse: se debe poder identificar qué entrada produjo qué salida y cuándo.
 
 **4.3.3 Desempeño alto (12–15 pts)**
-Están las cuatro piezas de estructura obligatoria; hay tres o más corridas reales completas (entrada + salida + fecha) fácilmente distinguibles entre sí (no variaciones triviales de la misma entrada); un tercero puede reconstruir cada corrida sin pedir aclaraciones.
+Están las cuatro piezas de estructura obligatoria; hay tres o más corridas reales completas (entrada + salida + fecha); un tercero puede reconstruir cada corrida sin pedir aclaraciones.
 
 **4.3.4 Desempeño intermedio (6–11 pts)**
 Falta una pieza menor de la estructura (por ejemplo, falta la fecha en alguna corrida, o hay solo dos corridas completas y una parcial) pero el conjunto sigue siendo mayormente reconstruible.
@@ -152,6 +152,8 @@ Falta una carpeta obligatoria (`prompts/` o `corridas/`), hay menos de tres corr
 - El README dice "hicimos varias corridas" pero `corridas/` no existe o está vacía.
 - Se muestra una salida sin la entrada que la generó (o viceversa), impidiendo reconstruir la corrida.
 - Las "tres corridas" son en realidad una sola ejecución copiada tres veces con cambios cosméticos.
+
+**Nota (no vinculante para el puntaje):** La consigna exige "al menos tres corridas reales", sin exigir que las entradas sean de naturaleza distinta entre sí. Si las tres corridas cubren escenarios de entrada diferentes, eso puede mencionarse como una señal cualitativa favorable del proceso de prueba, pero **no es un requisito**: su ausencia no baja el nivel asignado en esta dimensión.
 
 ---
 
@@ -221,5 +223,5 @@ Estos puntos no se resolvieron por decisión unilateral de esta v1 porque las fu
 
 1. **"Las seis piezas" del contrato.** `trabajo_final.pdf` menciona un "contrato escrito (system prompt + user prompt, con las seis piezas)" pero no define cuáles son esas seis piezas dentro de las fuentes provistas a este rol. La Dimensión 1 evalúa presencia y coherencia del contrato sin exigir una lista cerrada de seis piezas, para no inventar un requisito no respaldado. Si el material de clase define esas seis piezas explícitamente, la Dimensión 1 debería actualizarse para verificarlas una por una.
 2. **Definición operativa de L0–L4.** Las fuentes oficiales usan el término pero no fijan qué distingue a cada nivel. Esta rúbrica exige que el propio repositorio defina sus niveles de forma específica al sistema construido, en lugar de imponer una definición genérica no respaldada por la consigna.
-3. **Variedad exigida entre las tres corridas.** La consigna pide "al menos tres corridas reales con entradas reales" pero no exige explícitamente que las entradas sean de naturaleza distinta entre sí. Esta v1 trata como aceptable cualquier conjunto de tres corridas reales y reconstruibles, y deja como signo de desempeño alto (no como requisito mínimo) que las entradas cubran escenarios distintos.
+3. **Variedad entre las tres corridas — revisada, no es una ambigüedad abierta.** La consigna exige "al menos tres corridas reales con entradas reales" y nada más: no exige que las entradas sean de naturaleza distinta entre sí. La v1 original dejaba esto atado, de forma implícita, al desempeño alto de la Dimensión 3; se corrigió (ver 4.3.3 y la nota posterior a 4.3.6) para que la diversidad de escenarios sea, a lo sumo, una mención cualitativa no vinculante, y no una condición de nivel. No queda pendiente nada por validar acá: la fuente es clara y no respalda un requisito de variedad.
 4. **Escala numérica de puntaje por dimensión.** La consigna oficial da los pesos como porcentajes (30/25/15/15/15) pero no fija explícitamente un rango de puntos por dimensión. Esta rúbrica adopta la convención de puntuar cada dimensión de 0 al valor de su peso (de modo que la suma total sea sobre 100). Si el agente corrector requiere otra convención de puntaje, debe ajustarse aquí y no de forma implícita en el agente.
