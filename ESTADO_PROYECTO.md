@@ -6,7 +6,7 @@
 
 ## Fase actual
 
-Fase 2 — Rúbrica ejecutable v1: repositorio remoto GitHub conectado, primer commit realizado, y `rubrica.md` v1 (trabajo final) en revisión vía Pull Request.
+Preparación / fundación del repositorio: Git local inicializado; repositorio remoto GitHub y primer commit pendientes.
 
 ## Equipo y responsables
 
@@ -29,19 +29,17 @@ Fase 2 — Rúbrica ejecutable v1: repositorio remoto GitHub conectado, primer c
 - `AGENTS.md` creado y vigente.
 - `DECISIONES.md` y README mínimo completados.
 - `.gitignore` creado.
-- Git local inicializado en la rama `main`; repositorio remoto GitHub conectado y primer commit realizado.
+- Git local inicializado en la rama `main`, sin commits ni remoto configurado.
 - Estructura mínima versionable creada: `calibracion.md` inicial y README mínimos en `agente/`, los tres casos y `docs/`.
-- `rubrica.md` v1 (rúbrica del trabajo final, 30-25-15-15-15) redactada en la rama `feature/rubrica-v1` (Rol C), con evidencia observable por dimensión y ambigüedades documentadas para revisión humana (ver DEC-008). Pull Request #6 abierto hacia `main`, sin mergear.
 
 ## En curso
 
-- Revisión humana del grupo sobre el Pull Request #6 (`rubrica.md` v1) y sobre las ambigüedades registradas en su sección 6.
+- Revisión final de la documentación antes de preparar el primer commit.
 
 ## Pendiente inmediato
 
-- Revisar y, si corresponde, aprobar/mergear el PR #6.
-- Iniciar Rol B (agente corrector) usando `rubrica.md` v1 como base.
-- Iniciar Rol D/E (casos de prueba excelente, flojo, tramposo).
+- Conectar GitHub.
+- Preparar el primer commit.
 
 ## Bloqueos / inconsistencias conocidas
 
@@ -56,4 +54,4 @@ Repositorio base publicado correctamente en GitHub, con reglas, estado, decision
 
 ## Próximo paso
 
-Revisar el PR #6 en grupo y, si se aprueba, arrancar la construcción del agente corrector (Rol B) sobre `rubrica.md` v1.
+Preparar el primer commit.

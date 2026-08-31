@@ -88,18 +88,6 @@ Cuando Git esté activo, se podrán agregar Issue asociado, rama, commit y Pull 
 **Evidencia / archivos relacionados:** `AGENTS.md`; `00_fuentes/consigna/parcial_agente_evaluador.pdf`; `00_fuentes/consigna/trabajo_final.pdf`.  
 **Revisión futura:** Verificar esta separación al redactar `rubrica.md` y al construir los casos.
 
-## DEC-008 — Primera versión ejecutable de `rubrica.md` (trabajo final)
-
-**Estado:** Vigente — pendiente de revisión humana del grupo.  
-**Responsable / participantes:** Franco Gambini (Rol C - Rúbrica ejecutable).  
-**IA utilizada:** Claude (Claude Code), para leer las fuentes obligatorias, redactar `rubrica.md` v1 y abrir el Pull Request, bajo instrucción y revisión humana.  
-**Contexto:** El Issue #1 ("Definir rúbrica ejecutable v1") pedía la primera versión ejecutable de `rubrica.md` a partir de la consigna oficial del trabajo final, sin mezclarla con la rúbrica del parcial (ver DEC-007).  
-**Decisión:** Se redactó `rubrica.md` v1 operacionalizando las cinco dimensiones oficiales del trabajo final (Sistema completo y funcionando 30, Proceso documentado 25, Formato y reproducibilidad 15, Análisis económico 15, Gobierno y riesgo 15). Cada dimensión define: qué se evalúa, evidencia concreta requerida, niveles alto/intermedio/bajo con rangos de puntos, y ejemplos de qué evidencia no alcanza si solo está declarada. Se optó por documentar 4 ambigüedades reales en una sección final del archivo (definición de "las seis piezas" del contrato, niveles L0–L4, variedad exigida entre corridas, escala numérica de puntaje por dimensión) en lugar de resolverlas por decisión unilateral de la IA, por no estar respaldadas explícitamente en las fuentes disponibles.  
-**Motivo:** Cumplir el criterio de aceptación del Issue #1 (rúbrica precisa, aplicable por humano o agente, con evidencia verificable y resultados repetibles) sin inventar requisitos no respaldados por la consigna oficial.  
-**Impacto esperado:** Habilitar que el Rol B (Diego Mendez) construya y testee el agente corrector contra una rúbrica ejecutable concreta, y que el Rol F (Melisa Clark) calibre contra ella. Las ambigüedades documentadas quedan abiertas para la próxima reunión del grupo.  
-**Evidencia / archivos relacionados:** `rubrica.md`; Pull Request #6 (rama `feature/rubrica-v1` → `main`); Issue #1; `00_fuentes/consigna/trabajo_final.pdf`; `00_fuentes/consigna/parcial_agente_evaluador.pdf`.  
-**Revisión futura:** Ajustar `rubrica.md` según lo que el grupo resuelva sobre las ambigüedades de su sección 6, y nuevamente tras la calibración (Rol F) si se detectan desacuerdos que exijan cambiar escalas o evidencia exigida.
-
 ## Historial inicial de asistencia con IA
 
 - Codex realizó una inspección inicial del workspace en modo lectura.
