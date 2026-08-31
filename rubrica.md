@@ -50,7 +50,9 @@ Resultado esperado: dos aplicaciones independientes de esta rúbrica sobre el mi
 
 ## 3. Escala general de niveles
 
-Los tres niveles son mutuamente excluyentes y cubren el 100% del rango sin huecos. Se expresan como porcentaje del peso de la dimensión evaluada:
+Los tres niveles son mutuamente excluyentes y cubren el 100% del rango sin huecos. Se expresan como porcentaje del peso de la dimensión evaluada.
+
+> **Nota — convención operativa del equipo, no exigencia oficial.** Los cortes 80% / 40% que definen Alto / Intermedio / Bajo **no aparecen en `trabajo_final.pdf`**: la consigna oficial fija las cinco dimensiones y sus pesos (30/25/15/15/15), pero no fija escalas internas de desempeño dentro de cada una. Estos cortes son una convención adoptada por este equipo para que la rúbrica sea aplicable con niveles mutuamente excluyentes y sin huecos, tal como pide el Issue #1. No deben presentarse ni interpretarse como un requisito de la cátedra; si el profesor o el material de clase fija otros cortes, estos deben reemplazarse.
 
 | Nivel | Rango | Significado |
 |---|---|---|
@@ -211,7 +213,7 @@ No hay mención de permisos, riesgos, revisión humana ni responsable, o se limi
 - [x] Cada dimensión especifica evidencia observable en el repositorio (sección 4.x.2 de cada una).
 - [x] Ningún nivel de desempeño se apoya solo en declaraciones: cada dimensión incluye una sub-sección explícita de "evidencia que NO alcanza si solo está declarada".
 - [x] No se mezclan dimensiones, pesos ni escalas con la rúbrica del parcial grupal (ver sección 0).
-- [x] Las escalas son consistentes entre dimensiones: mismos cortes porcentuales (80% / 40%) aplicados al peso de cada una, sin huecos ni solapamientos (sección 3).
+- [x] Las escalas son consistentes entre dimensiones: mismos cortes porcentuales (80% / 40%, convención operativa del equipo — no exigidos por la consigna oficial, ver sección 3) aplicados al peso de cada una, sin huecos ni solapamientos.
 
 ## 6. Ambigüedades reales para revisión humana (v1)
 
