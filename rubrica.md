@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Objeto de evaluación | Repositorios individuales del **Trabajo final** (no el parcial grupal) |
-| Versión | v2 — escala docente de cinco niveles |
+| Versión | v2 — escala de cinco niveles |
 | Autor / Rol responsable | Franco Gambini — Rol C, Rúbrica ejecutable |
 | Principio rector | **EVIDENCIA > DECLARACIÓN** |
 
@@ -12,11 +12,11 @@
 - `00_fuentes/consigna/parcial_agente_evaluador.pdf`: define el propósito del agente evaluador y la rúbrica del parcial grupal. No aporta dimensiones ni pesos al trabajo final.
 - `00_fuentes/consigna/trabajo_final.pdf`: define los requisitos, las cinco dimensiones y los pesos oficiales que esta rúbrica vuelve ejecutables.
 
-## Evidencia docente observada en clase
+## Ejemplo de operacionalización observado en clase
 
-Durante la clase se observó una escala docente discreta de cinco niveles, todos definidos mediante evidencia observable: **0%, 25%, 50%, 75% y 100%**.
+Durante la clase se observó un ejemplo de escala discreta de cinco niveles, definidos mediante evidencia observable: **0%, 25%, 50%, 75% y 100%**. Ese ejemplo constituye evidencia pedagógica no normativa.
 
-Esta evidencia se utiliza para operacionalizar las dimensiones y los pesos de la rúbrica oficial. **No reemplaza ni modifica la consigna oficial.** Su aplicación transversal a las cinco dimensiones es una decisión de diseño aprobada por el equipo, basada en el criterio docente observado y registrada en el Issue #7.
+La consigna oficial exige una rúbrica ejecutable con niveles claros, evidencia requerida y ejemplos, pero no fija esta granularidad. El equipo adopta transversalmente la escala **0% / 25% / 50% / 75% / 100%** como convención de diseño, influido por el ejemplo trabajado en clase y registrado en el Issue #7. **El ejemplo no reemplaza ni modifica la consigna oficial.**
 
 ## Documentación operativa del equipo
 
@@ -54,7 +54,7 @@ Reglas de evidencia:
 
 ## 2. Mecánica de scoring de cinco niveles
 
-La consigna oficial fija las dimensiones y sus pesos. La escala discreta se adopta a partir de la evidencia docente observada en clase y de la decisión de diseño registrada en el Issue #7.
+La consigna oficial fija las dimensiones y sus pesos. La escala discreta es una convención de diseño del equipo, inspirada en el ejemplo de operacionalización observado en clase y registrada en el Issue #7.
 
 Para cada dimensión, el evaluador debe:
 
