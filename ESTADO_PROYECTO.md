@@ -2,21 +2,21 @@
 
 ## Fecha de actualización
 
-31 de agosto de 2026.
+1 de septiembre de 2026.
 
 ## Fase actual
 
-Desarrollo inicial: repositorio GitHub activo y rúbrica ejecutable V2 completada en `main`; agente, casos y calibración pendientes de desarrollo.
+Desarrollo inicial: repositorio GitHub activo, rúbrica ejecutable V2 y caso adversarial / tramposo completados en `main`; agente corrector, casos excelente y flojo, y calibración pendientes de desarrollo.
 
 ## Equipo y responsables
 
 | Rol | Responsable | Alcance principal |
 |---|---|---|
 | A | Pablo Bellesi | Coordinación e integración del avance |
-| B | Diego Mendez | Integración técnica; agente corrector en desarrollo |
+| B | Diego Mendez | Integración técnica; agente corrector pendiente |
 | C | Franco Gambini | Rúbrica ejecutable completada; disponible para consulta |
-| D | Sofia Mapelli | Casos excelente y flojo |
-| E | Franco Forziati | Caso adversarial / tramposo |
+| D | Sofia Mapelli | Casos excelente y flojo pendientes |
+| E | Franco Forziati | Caso adversarial / tramposo completado; disponible para consulta |
 | F | Melisa Clark | Calibración y QA, dependiente de agente y casos |
 
 ## Completado
@@ -34,16 +34,18 @@ Desarrollo inicial: repositorio GitHub activo y rúbrica ejecutable V2 completad
 - Rúbrica ejecutable V2 completada en `rubrica.md` y disponible en `main`.
 - Issue #1 y Issue #7 cerrados.
 - PR #6 y PR #8 mergeados hacia `main`.
+- Caso adversarial / tramposo completado e integrado en `casos/tramposo/`.
+- Issue #4 cerrado y PR #11 mergeado hacia `main`.
+- Franco Forziati (Rol E) completó su responsabilidad principal.
 
 ## En curso
 
-- Agente corrector: en desarrollo (responsable principal: Diego Mendez, Rol B).
+- Ninguna actividad con rama o Pull Request verificable.
 
 ## Pendiente inmediato
 
 - Completar el agente corrector.
 - Construir los casos excelente y flojo.
-- Construir el caso adversarial / tramposo.
 - Ejecutar calibración y QA cuando existan agente y casos.
 
 ## Bloqueos / inconsistencias conocidas
@@ -53,7 +55,7 @@ Desarrollo inicial: repositorio GitHub activo y rúbrica ejecutable V2 completad
 
 ## Próximo milestone
 
-Agente corrector ejecutable y casos de prueba iniciales listos para comenzar la calibración.
+Agente corrector ejecutable y casos excelente y flojo listos para comenzar la calibración.
 
 ## Próximo paso
 
