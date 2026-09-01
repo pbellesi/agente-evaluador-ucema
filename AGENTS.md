@@ -59,7 +59,7 @@ Todo agente debe:
 
 ## 7. Git y colaboración
 
-Git local está inicializado en la rama `main`, sin commits y sin remoto GitHub configurado. El flujo colaborativo con Issues, ramas y Pull Requests comenzará una vez conectado el repositorio remoto:
+Git local está inicializado, la rama `main` tiene commits y el remoto `origin` apunta al repositorio GitHub compartido. El flujo colaborativo con Issues, ramas y Pull Requests está activo:
 
 - `main` no se modifica directamente.
 - Cada tarea se asocia a un Issue.

@@ -2,7 +2,7 @@
 
 Este archivo documenta decisiones significativas del proyecto: su contexto, criterio humano, apoyo de IA, impacto y eventual revisión. No transcribe chats completos con IA; registra interacciones significativas cuando influyeron en una decisión. Cada decisión puede revisarse posteriormente: si cambia, no se borra la versión anterior, sino que se documenta su evolución.
 
-Cuando Git esté activo, se podrán agregar Issue asociado, rama, commit y Pull Request. Por ahora no existen esos identificadores.
+Cuando resulte relevante, cada decisión puede vincularse con Issue, rama, commit y Pull Request. Los identificadores se registran cuando existen y aportan trazabilidad.
 
 ## DEC-001 — Asignación definitiva de roles
 
@@ -88,6 +88,18 @@ Cuando Git esté activo, se podrán agregar Issue asociado, rama, commit y Pull 
 **Evidencia / archivos relacionados:** `AGENTS.md`; `00_fuentes/consigna/parcial_agente_evaluador.pdf`; `00_fuentes/consigna/trabajo_final.pdf`.  
 **Revisión futura:** Verificar esta separación al redactar `rubrica.md` y al construir los casos.
 
+## DEC-008 — Evolución y cierre de la rúbrica ejecutable V2
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi (Rol A - coordinación y validación humana); Franco Gambini (Rol C - rúbrica ejecutable).<br>
+**IA utilizada:** Codex, para auditorías, edición y verificación bajo instrucciones y aprobación humanas.<br>
+**Contexto:** La primera versión de la rúbrica utilizaba un scoring interno `CUMPLE / PARCIAL / NO CUMPLE`. Una auditoría identificó que ese mecanismo podía dejar margen insuficiente para una asignación determinística. La corrección se integró como una primera versión ejecutable mediante el PR #6, que cerró el Issue #1. Posteriormente, durante una clase se observó un ejemplo pedagógico de escala discreta 0% / 25% / 50% / 75% / 100%. Inicialmente se le atribuyó un peso normativo mayor al que correspondía.<br>
+**Decisión:** Tras la aclaración humana de que el ejemplo de clase no amplía ni modifica las consignas oficiales, el equipo conserva la escala de cinco niveles como **convención de diseño propia**. La rúbrica V2 deja explícito que el ejemplo fue una inspiración pedagógica no normativa; las consignas oficiales continúan siendo la fuente normativa.<br>
+**Motivo:** La escala discreta mejora la precisión y la repetibilidad de la rúbrica sin atribuir al docente un requisito que no estableció.<br>
+**Impacto esperado:** Permitir que humanos y agentes apliquen niveles y evidencia de manera consistente, manteniendo la jerarquía correcta de fuentes.<br>
+**Evidencia / archivos relacionados:** `rubrica.md` V2; Issue #1 y PR #6; Issue #7 y PR #8; auditoría final contra las consignas oficiales con veredicto MERGE.<br>
+**Revisión futura:** Revisar únicamente ante una modificación de la consigna oficial o una nueva decisión humana documentada. No convertir el ejemplo pedagógico en normativa por iniciativa propia.
+
 ## Historial inicial de asistencia con IA
 
 - Codex realizó una inspección inicial del workspace en modo lectura.
@@ -96,4 +108,4 @@ Cuando Git esté activo, se podrán agregar Issue asociado, rama, commit y Pull 
 - Codex generó `AGENTS.md` a partir de instrucciones y fuentes seleccionadas.
 - Codex generó `ESTADO_PROYECTO.md` reflejando el estado real.
 
-Las acciones fueron solicitadas y validadas por el coordinador. Codex no tomó decisiones autónomas sobre roles, rúbricas ni Git. Git todavía no fue inicializado.
+Las acciones fueron solicitadas y validadas por el coordinador. Codex no tomó decisiones autónomas sobre roles, rúbricas ni Git. Este registro describe el período inicial, previo a la inicialización de Git; la evolución posterior quedó trazable mediante Issues, ramas, commits y Pull Requests.

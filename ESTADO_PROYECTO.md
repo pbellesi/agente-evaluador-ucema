@@ -6,18 +6,18 @@
 
 ## Fase actual
 
-Preparación / fundación del repositorio: Git local inicializado; repositorio remoto GitHub y primer commit pendientes.
+Desarrollo inicial: repositorio GitHub activo y rúbrica ejecutable V2 completada en `main`; agente, casos y calibración pendientes de desarrollo.
 
 ## Equipo y responsables
 
 | Rol | Responsable | Alcance principal |
 |---|---|---|
-| A | Pablo Bellesi | Coordinación |
-| B | Diego Mendez | Integración técnica |
-| C | Franco Gambini | Rúbrica ejecutable |
+| A | Pablo Bellesi | Coordinación e integración del avance |
+| B | Diego Mendez | Integración técnica; agente corrector en desarrollo |
+| C | Franco Gambini | Rúbrica ejecutable completada; disponible para consulta |
 | D | Sofia Mapelli | Casos excelente y flojo |
 | E | Franco Forziati | Caso adversarial / tramposo |
-| F | Melisa Clark | Calibración y QA |
+| F | Melisa Clark | Calibración y QA, dependiente de agente y casos |
 
 ## Completado
 
@@ -26,32 +26,35 @@ Preparación / fundación del repositorio: Git local inicializado; repositorio r
 - Material docente cargado en `00_fuentes/docente/`.
 - Documentos internos cargados en `00_fuentes/equipo/`.
 - Roles normalizados en la documentación interna.
-- `AGENTS.md` creado y vigente.
-- `DECISIONES.md` y README mínimo completados.
+- `AGENTS.md`, `DECISIONES.md` y README mínimo creados.
 - `.gitignore` creado.
-- Git local inicializado en la rama `main`, sin commits ni remoto configurado.
+- Git local inicializado, con rama `main`, commits y remoto GitHub configurado.
 - Estructura mínima versionable creada: `calibracion.md` inicial y README mínimos en `agente/`, los tres casos y `docs/`.
+- Repositorio base publicado en GitHub.
+- Rúbrica ejecutable V2 completada en `rubrica.md` y disponible en `main`.
+- Issue #1 y Issue #7 cerrados.
+- PR #6 y PR #8 mergeados hacia `main`.
 
 ## En curso
 
-- Revisión final de la documentación antes de preparar el primer commit.
+- Agente corrector: en desarrollo (responsable principal: Diego Mendez, Rol B).
 
 ## Pendiente inmediato
 
-- Conectar GitHub.
-- Preparar el primer commit.
+- Completar el agente corrector.
+- Construir los casos excelente y flojo.
+- Construir el caso adversarial / tramposo.
+- Ejecutar calibración y QA cuando existan agente y casos.
 
 ## Bloqueos / inconsistencias conocidas
 
-- Checkmarks prematuros en documentación interna que no reflejan archivos reales.
-- Escalas de ejemplo inconsistentes en la guía interna de calibración.
-- Referencia a un archivo PDF inexistente en el plan interno.
-- Separación pendiente entre ejemplos internos y requisitos oficiales.
+- La calibración efectiva depende de un agente corrector funcional y de los tres casos de prueba.
+- Persisten checkmarks prematuros, escalas de ejemplo inconsistentes y una referencia a PDF inexistente en documentación interna; no fueron corregidos en este Issue.
 
 ## Próximo milestone
 
-Repositorio base publicado correctamente en GitHub, con reglas, estado, decisiones y estructura mínima consistente.
+Agente corrector ejecutable y casos de prueba iniciales listos para comenzar la calibración.
 
 ## Próximo paso
 
-Preparar el primer commit.
+Avanzar con el agente corrector.
