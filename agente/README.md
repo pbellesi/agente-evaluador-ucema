@@ -66,7 +66,7 @@ Una herramienta compatible con system prompts y con acceso de lectura real a los
    ```
    Evaluá este repositorio de trabajo final:
    https://github.com/usuario/trabajo-final-repo
-   
+
    Rama: main
    ```
 
