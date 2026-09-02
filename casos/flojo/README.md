@@ -1,8 +1,11 @@
-# Caso Flojo
+# RadarNorma básico — caso flojo
 
-Estado: pendiente de desarrollo.
+Este proyecto ayuda a revisar novedades regulatorias. Lee un archivo de texto y muestra si encuentra palabras importantes.
 
-Responsable principal:
-Sofia Mapelli — Rol D.
+## Uso
 
-No construir todavía el caso.
+```bash
+python src/main.py entrada.txt
+```
+
+Hay una ejecución guardada en `corridas/`. Todavía faltan algunas mejoras de documentación y automatización.
