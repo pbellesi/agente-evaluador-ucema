@@ -8,7 +8,7 @@ El orden de trabajo fue el siguiente:
 
 1. Se inspeccionaron la rúbrica completa, el árbol y el contenido de cada caso, el código, los prompts, las corridas, la documentación y el historial Git pertinente.
 2. Se cerró y registró la evaluación humana de los tres casos antes de ejecutar el agente corrector. Para cada dimensión se recorrieron los niveles desde 100% hacia 0% y se eligió el nivel más alto completamente demostrado.
-3. Después se ejecutó el corrector v1 cargando `agente/system_prompt.md` como instrucciones, `rubrica.md` V2 como rúbrica autoritativa y cada carpeta de caso como repositorio objetivo. La ejecución se hizo en Codex el 3 de septiembre de 2026; la interfaz no expuso un identificador de modelo más específico.
+3. Después se ejecutó el corrector v1 cargando `agente/system_prompt.md` como instrucciones, `rubrica.md` V2 como rúbrica autoritativa y cada carpeta de caso como repositorio objetivo. La ejecución se hizo en Codex el 2 de septiembre de 2026; la interfaz no expuso un identificador de modelo más específico.
 4. Como comprobaciones auxiliares se ejecutaron los comandos documentados de los tres casos y se contrastaron las salidas guardadas con la implementación. Los comandos de Excelente, Flojo y Tramposo se ejecutaron. No se pudieron ejecutar los tests porque `pytest` no está instalado en el entorno; sus aserciones sí fueron inspeccionadas directamente.
 5. Los puntajes humanos no se modificaron después de conocer los puntajes del agente.
 
