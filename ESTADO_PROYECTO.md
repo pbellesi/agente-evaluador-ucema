@@ -2,61 +2,67 @@
 
 ## Fecha de actualización
 
-1 de septiembre de 2026.
+3 de septiembre de 2026.
 
 ## Fase actual
 
-Desarrollo inicial: repositorio GitHub activo, rúbrica ejecutable V2 y caso adversarial / tramposo completados en `main`; agente corrector, casos excelente y flojo, y calibración pendientes de desarrollo.
+Cierre documental de la entrega, posterior a la integración de las cuatro piezas obligatorias: rúbrica V2, agente corrector v1, tres casos y calibración inicial documentada.
+
+Base verificada: `main` en `adb57c3e2d25f53da7b14d2094cfee26f1c77b12`, limpia y sincronizada con `origin/main` antes de abrir la rama documental. No hay Issues ni PRs funcionales pendientes; el cierre documental se trabaja por separado en el Issue #17 y la rama `docs/cierre-final-entrega`.
 
 ## Equipo y responsables
 
 | Rol | Responsable | Alcance principal |
 |---|---|---|
 | A | Pablo Bellesi | Coordinación e integración del avance |
-| B | Diego Mendez | Integración técnica; agente corrector pendiente |
+| B | Diego Mendez | Integración técnica; agente corrector v1 completado |
 | C | Franco Gambini | Rúbrica ejecutable completada; disponible para consulta |
-| D | Sofia Mapelli | Casos excelente y flojo pendientes |
+| D | Sofia Mapelli | Casos excelente y flojo completados |
 | E | Franco Forziati | Caso adversarial / tramposo completado; disponible para consulta |
-| F | Melisa Clark | Calibración y QA, dependiente de agente y casos |
+| F | Melisa Clark | Calibración inicial y QA documentados; limitaciones preservadas |
 
 ## Completado
 
-- Estructura base de carpetas creada.
-- Fuentes oficiales cargadas en `00_fuentes/consigna/`.
-- Material docente cargado en `00_fuentes/docente/`.
-- Documentos internos cargados en `00_fuentes/equipo/`.
-- Roles normalizados en la documentación interna.
-- `AGENTS.md`, `DECISIONES.md` y README mínimo creados.
-- `.gitignore` creado.
-- Git local inicializado, con rama `main`, commits y remoto GitHub configurado.
-- Estructura mínima versionable creada: `calibracion.md` inicial y README mínimos en `agente/`, los tres casos y `docs/`.
-- Repositorio base publicado en GitHub.
-- Rúbrica ejecutable V2 completada en `rubrica.md` y disponible en `main`.
-- Issue #1 y Issue #7 cerrados.
-- PR #6 y PR #8 mergeados hacia `main`.
-- Caso adversarial / tramposo completado e integrado en `casos/tramposo/`.
-- Issue #4 cerrado y PR #11 mergeado hacia `main`.
-- Franco Forziati (Rol E) completó su responsabilidad principal.
+- Repositorio público, estructura obligatoria, fuentes, roles, reglas operativas y `.gitignore` disponibles.
+- Rúbrica ejecutable V2 completa en `rubrica.md`; cinco niveles como convención del equipo.
+- Agente corrector v1 integrado en `agente/`, con contrato JSON y validación inicial contra Tramposo.
+- Los tres casos completos e integrados: excelente, flojo y tramposo.
+- Calibración humano/agente realizada y registrada en `calibracion.md`, con desacuerdos y limitaciones de trazabilidad explícitos.
+
+### Issues cerrados y PRs mergeados
+
+| Trabajo | Issue cerrado | PR mergeado hacia main |
+|---|---|---|
+| Rúbrica original | [#1](https://github.com/pbellesi/agente-evaluador-ucema/issues/1) | [#6](https://github.com/pbellesi/agente-evaluador-ucema/pull/6) |
+| Escala V2 | [#7](https://github.com/pbellesi/agente-evaluador-ucema/issues/7) | [#8](https://github.com/pbellesi/agente-evaluador-ucema/pull/8) |
+| Documentación post-rúbrica | [#9](https://github.com/pbellesi/agente-evaluador-ucema/issues/9) | [#10](https://github.com/pbellesi/agente-evaluador-ucema/pull/10) |
+| Caso tramposo | [#4](https://github.com/pbellesi/agente-evaluador-ucema/issues/4) | [#11](https://github.com/pbellesi/agente-evaluador-ucema/pull/11) |
+| Estado post-tramposo | [#12](https://github.com/pbellesi/agente-evaluador-ucema/issues/12) | [#13](https://github.com/pbellesi/agente-evaluador-ucema/pull/13) |
+| Agente corrector | [#2](https://github.com/pbellesi/agente-evaluador-ucema/issues/2) | [#14](https://github.com/pbellesi/agente-evaluador-ucema/pull/14) |
+| Casos excelente y flojo | [#3](https://github.com/pbellesi/agente-evaluador-ucema/issues/3) | [#15](https://github.com/pbellesi/agente-evaluador-ucema/pull/15) |
+| Calibración y QA | [#5](https://github.com/pbellesi/agente-evaluador-ucema/issues/5) | [#16](https://github.com/pbellesi/agente-evaluador-ucema/pull/16) |
 
 ## En curso
 
-- Ninguna actividad con rama o Pull Request verificable.
+- Cierre documental: [Issue #17](https://github.com/pbellesi/agente-evaluador-ucema/issues/17), rama `docs/cierre-final-entrega`; no incorpora cambios funcionales.
 
 ## Pendiente inmediato
 
-- Completar el agente corrector.
-- Construir los casos excelente y flojo.
-- Ejecutar calibración y QA cuando existan agente y casos.
+- Revisar e integrar el cierre documental mediante PR.
+- Realizar la revisión final de entrega.
+- Publicar el enlace del repositorio en el campus; su entrega no está acreditada en GitHub.
 
 ## Bloqueos / inconsistencias conocidas
 
-- La calibración efectiva depende de un agente corrector funcional y de los tres casos de prueba.
-- Persisten checkmarks prematuros, escalas de ejemplo inconsistentes y una referencia a PDF inexistente en documentación interna; no fueron corregidos en este Issue.
+- La primera calibración no preservó un baseline humano previo independiente ni los outputs brutos completos; no demuestra repetibilidad plena.
+- Persiste la ambigüedad de Sistema 25%/50%, con inconsistencia humana Flojo–Tramposo y variación histórica del Tramposo. No se alteraron puntajes, rúbrica ni agente para ocultarla; cualquier ajuste requiere decisión humana posterior.
+- No hubo re-test ni prueba dirigida de prompt injection en esa calibración. El detalle está en `calibracion.md`.
+- Las guías internas conservan checkmarks y ejemplos históricos que no acreditan ejecución ni agregan requisitos oficiales.
 
 ## Próximo milestone
 
-Agente corrector ejecutable y casos excelente y flojo listos para comenzar la calibración.
+Entrega documentalmente consistente, revisada y con enlace presentado en el campus.
 
 ## Próximo paso
 
-Avanzar con el agente corrector.
+Revisar el PR de cierre documental asociado al Issue #17.
