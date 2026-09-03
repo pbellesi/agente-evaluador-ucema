@@ -109,3 +109,75 @@ Cuando resulte relevante, cada decisión puede vincularse con Issue, rama, commi
 - Codex generó `ESTADO_PROYECTO.md` reflejando el estado real.
 
 Las acciones fueron solicitadas y validadas por el coordinador. Codex no tomó decisiones autónomas sobre roles, rúbricas ni Git. Este registro describe el período inicial, previo a la inicialización de Git; la evolución posterior quedó trazable mediante Issues, ramas, commits y Pull Requests.
+
+## DEC-009 — Preservar la validez del caso adversarial
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi, revisión y autorización de la corrección; Franco Forziati, responsable humano del caso.<br>
+**IA utilizada:** Claude en el trabajo original; Codex en la corrección solicitada por coordinación.<br>
+**Contexto:** La revisión del PR #11 detectó que `casos/tramposo/NOTA.md` explicaba las trampas y la puntuación esperada dentro del propio objetivo evaluado.<br>
+**Decisión:** Eliminar únicamente esa nota del árbol del caso y conservar sus contradicciones, afirmaciones infladas, código, tests y corridas.<br>
+**Motivo:** Evitar que la prueba entregue la respuesta al corrector sin suavizar su contenido adversarial.<br>
+**Impacto esperado:** Evaluar el contraste de evidencia; la eliminación no borra el archivo del historial Git, que se conserva como evidencia de la revisión.<br>
+**Evidencia / archivos relacionados:** [Issue #4](https://github.com/pbellesi/agente-evaluador-ucema/issues/4), [PR #11 y comentario de revisión](https://github.com/pbellesi/agente-evaluador-ucema/pull/11); original `59fae77`, corrección `5567657`; `casos/tramposo/`.<br>
+**Revisión futura:** Conservar la historia y distinguir los artefactos del caso de las notas y resultados de su evaluación.
+
+## DEC-010 — Recuperación técnica mediante Git bundles
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi, integración/publicación; Franco Forziati, Sofia Mapelli y Melisa Clark, responsables humanos de los trabajos recibidos.<br>
+**IA utilizada:** Claude para el caso tramposo; Codex para excelente/flojo, calibración y asistencia de integración.<br>
+**Contexto:** Algunas integraciones de IA presentaron restricciones de escritura. El PR #11 documenta específicamente la falta de permiso `contents: write` de Claude web. Los trabajos de los tres responsables se recibieron mediante bundles.<br>
+**Decisión:** Importar las ramas y publicar los commits originales, preservando hashes, autoría técnica, committer y relaciones de parentesco, sin amend, rebase ni cherry-pick que los sustituyera. Pablo actuó como integrador/publicador de esos trabajos.<br>
+**Motivo:** Recuperar el trabajo sin convertir a quien hace el push en autor de toda la implementación.<br>
+**Impacto esperado:** Conservar la división de responsabilidades y una historia verificable; los cambios de revisión posteriores se incorporan como commits nuevos.<br>
+**Evidencia / archivos relacionados:** [PR #11](https://github.com/pbellesi/agente-evaluador-ucema/pull/11) / Issue #4: `59fae77`; [PR #15](https://github.com/pbellesi/agente-evaluador-ucema/pull/15) / Issue #3: `ba10117`; [PR #16](https://github.com/pbellesi/agente-evaluador-ucema/pull/16) / Issue #5: `bb5d256` y `5bde10e`. Git identifica a Claude o Codex como autores técnicos de esos commits; las descripciones de Issues/PRs identifican a sus responsables humanos.<br>
+**Revisión futura:** Usar el mismo criterio de preservación si vuelve a ser necesaria una recuperación, sin atribuir una causa técnica no comprobada a cada integración.
+
+## DEC-011 — Endurecimiento del contrato del agente tras revisión
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Diego Mendez, responsable humano del agente; Pablo Bellesi, revisión y autorización de las correcciones.<br>
+**IA utilizada:** Claude en la versión original; Codex en la revisión, corrección y validación manual posterior.<br>
+**Contexto:** La primera versión del PR #14 dejaba ambigüedades en acceso a la rúbrica, inspección, salida JSON y manejo de evidencia insuficiente.<br>
+**Decisión:** Separar la rúbrica autoritativa del evaluador y el repositorio objetivo; exigir inventario y contraste de artefactos; fijar el JSON completo también ante problemas de acceso; eliminar la penalización automática inventada de 0%. Mantener el nivel más alto completamente demostrado por la rúbrica.<br>
+**Motivo:** Reducir crédito por declaraciones sin evidencia y asegurar una salida contractual consistente.<br>
+**Impacto esperado:** Corrector más verificable. La validación inicial registró contradicciones concretas del Tramposo, con las limitaciones que después documentó la calibración.<br>
+**Evidencia / archivos relacionados:** [Issue #2](https://github.com/pbellesi/agente-evaluador-ucema/issues/2), [PR #14](https://github.com/pbellesi/agente-evaluador-ucema/pull/14); original `98df88c`, corrección `aed9d9a` y limpieza `9c1be5a`; `agente/system_prompt.md`, `agente/validacion_caso_tramposo.md`.<br>
+**Revisión futura:** Cualquier ajuste funcional posterior debe basarse en evidencia nueva y decisión humana; este registro no cambia el contrato.
+
+## DEC-012 — Casos diferenciados sin notas prefijadas
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Sofia Mapelli, responsable humana de excelente/flojo; Pablo Bellesi, coordinación, revisión e integración.<br>
+**IA utilizada:** Codex para implementación y asistencia de revisión.<br>
+**Contexto:** Los dos casos debían distinguir calidad mediante evidencia observable. La revisión documentada del excelente incorporó la participación real del modelo y conservó la limitación de métricas económicas no expuestas.<br>
+**Decisión:** Mantener un excelente fuerte pero no perfecto y un flojo incompleto, realista y evaluable; no construirlos para forzar 100/0 ni cambiar artefactos para alcanzar una nota objetivo.<br>
+**Motivo:** Probar la discriminación del corrector con resultados observados y faltantes reconocibles.<br>
+**Impacto esperado:** Separación útil para calibración sin ocultar debilidades. El PR #15 conserva 83,75 como validación inicial y 82,5 como auditoría posterior del excelente; registra 28,75 para Flojo. No se reemplaza la historia por un único resultado retrospectivo.<br>
+**Evidencia / archivos relacionados:** [Issue #3](https://github.com/pbellesi/agente-evaluador-ucema/issues/3), [PR #15](https://github.com/pbellesi/agente-evaluador-ucema/pull/15), commit preservado `ba10117`; `casos/excelente/DECISIONES.md`, sus corridas y análisis económico; `casos/flojo/`; comparación posterior en `calibracion.md`.<br>
+**Revisión futura:** Mantener separados resultados históricos y nuevas evaluaciones; no inferir que la etiqueta del caso garantiza una puntuación.
+
+## DEC-013 — Calibración con desacuerdos y trazabilidad limitada
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Melisa Clark, responsable humana de calibración y QA; Pablo Bellesi, revisión y autorización de la aclaración documental.<br>
+**IA utilizada:** Codex para análisis y asistencia documental.<br>
+**Contexto:** La calibración registró humano/agente: Excelente 82,5/82,5; Flojo 21,25/28,75; Tramposo 26,25/26,25. La revisión detectó falta de baseline humano independiente previo y outputs brutos completos, inconsistencia humana entre Flojo y Tramposo y variación del agente en Tramposo respecto de 18,75.<br>
+**Decisión:** Preservar todos los puntajes y reconocer las limitaciones. El procedimiento relatado fue humano primero y agente después, pero esa secuencia no puede verificarse independientemente en Git. No inventar registros retroactivos ni modificar rúbrica, agente o casos sólo para forzar coincidencia.<br>
+**Motivo:** Conservar los desacuerdos reales y el aprendizaje sobre el límite 25%/50% de Sistema.<br>
+**Impacto esperado:** Registro honesto de la primera calibración. ±10 es un criterio interno de análisis, no aceptación docente; la diferencia histórica de +7,5 no demuestra una mejora del caso; la causa se presenta como probable. No hubo ajuste funcional ni re-test, y no se documentó una prueba dirigida de prompt injection.<br>
+**Evidencia / archivos relacionados:** [Issue #5](https://github.com/pbellesi/agente-evaluador-ucema/issues/5), [PR #16](https://github.com/pbellesi/agente-evaluador-ucema/pull/16); originales `bb5d256` y `5bde10e`, aclaración `6ab8230`; `calibracion.md` y `agente/validacion_caso_tramposo.md`.<br>
+**Revisión futura:** El criterio uniforme 25%/50% sigue abierto a decisión humana. Una ronda posterior deberá identificarse como nueva, conservando la evidencia original; no se la da por realizada en este cierre documental.
+
+## DEC-014 — Confirmación de fuentes para el cierre documental
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi, coordinación y confirmación del criterio de fuentes para este cierre.<br>
+**IA utilizada:** Codex, para contraste y documentación.<br>
+**Contexto:** La interpretación inicial del ejemplo de clase atribuyó demasiado peso normativo a la escala de cinco niveles. DEC-008 y la rúbrica V2 registran su corrección; el cierre documental debe conservarla.<br>
+**Decisión:** Las consignas oficiales del parcial y del trabajo final mantienen prioridad normativa. Los ejemplos adicionales del docente son referencia pedagógica y no agregan obligaciones. La escala 0/25/50/75/100 continúa como convención del equipo. Las guías PIC-AE no acreditan pruebas realizadas ni requisitos oficiales.<br>
+**Motivo:** Evitar que ejemplos, checkmarks históricos o recomendaciones se confundan con evidencia de ejecución o exigencias de la materia.<br>
+**Impacto esperado:** Portada y estado final coherentes con las fuentes, sin borrar las decisiones históricas ni presentar una historia perfecta.<br>
+**Evidencia / archivos relacionados:** Consignas en `00_fuentes/consigna/`; DEC-006 y DEC-008; `rubrica.md`; commit `7de9dad` del [PR #8](https://github.com/pbellesi/agente-evaluador-ucema/pull/8); [Issue #17](https://github.com/pbellesi/agente-evaluador-ucema/issues/17).<br>
+**Revisión futura:** Mantener visible la jerarquía y documentar cualquier nueva aclaración respaldada, sin reinterpretar retroactivamente la historia.

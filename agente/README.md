@@ -95,17 +95,15 @@ Una herramienta compatible con system prompts y con acceso de lectura real a los
 
 ## Limitaciones conocidas de v1
 
-- **No es calibrada**: Esta versión es la primera funcional. La calibración contra múltiples casos y evaluadores es tarea de Melisa (Rol F).
-- **Validación inicial limitada**: Incluye una prueba manual contra `casos/tramposo/`; todavía falta calibración comparativa con los tres casos y criterio humano.
+- **Estado de integración**: Agente v1 integrado en `main` mediante PR #14 (Issue #2 cerrado). La validación manual inicial contra `casos/tramposo/` se conserva en `validacion_caso_tramposo.md`.
+- **Calibración posterior realizada**: La misma v1 se utilizó con excelente, flojo y tramposo en la calibración de Melisa Clark (Rol F), integrada mediante PR #16. [calibracion.md](../calibracion.md) conserva los puntajes y desacuerdos originales.
+- **Trazabilidad y repetibilidad limitadas**: Esa calibración no preservó un baseline humano previo independiente ni outputs brutos completos. Documenta la ambigüedad 25%/50% de Sistema, la inconsistencia humana y la variación histórica del Tramposo; no hubo cambios del agente ni re-test.
 - **Ambigüedades documentadas**: `rubrica.md` sección 6 lista tres ambigüedades abiertas ("seis piezas", límites L0–L4, "README estándar") que no cierra v1 por iniciativa propia.
-- **Resistencia a injection v1**: Detecta y reporta manipulación en `integrity_notes`, pero no es infalible.
+- **Validación adversarial acotada**: Se documentó detección de contradicciones y evidencia inflada. No se documentó una prueba dirigida de prompt injection en la calibración; sus resultados no demuestran resistencia plena.
 
-## Próximos pasos (no en v1)
+## Estado de las etapas posteriores
 
-- Casos de prueba `casos/excelente/` y `casos/flojo/` integrados y ejecutados
-- Calibración con múltiples evaluadores humanos
-- Ajustes de precision / recall basados en resultados reales
-- Integración en pipeline de evaluación automática
+Los casos excelente y flojo están integrados por PR #15 y la calibración comparativa de los tres casos está documentada por PR #16. Cualquier nueva ronda o ajuste funcional queda sujeto a una decisión posterior; este cierre documental no implementa mejoras ni nuevas evaluaciones.
 
 ## Archivos en esta carpeta
 
