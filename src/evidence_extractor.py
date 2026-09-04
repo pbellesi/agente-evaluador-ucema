@@ -78,8 +78,10 @@ def extract_objective_evidence(repo_data: dict) -> dict:
         r'conectado"\s*:\s*false',
         r'return\s*\{\s*"conectado"\s*:\s*false',
         # Un placeholder de UI o texto aislado no demuestra un conector simulado.
-        r'\bplaceholder\b.{0,80}\b(?:conector|connector|api|integraci[oó]n)\b',
-        r'\b(?:conector|connector|api|integraci[oó]n)\b.{0,80}\bplaceholder\b',
+        # Exigir una frase técnica con separadores léxicos evita atravesar atributos
+        # HTML como placeholder="checkout-api".
+        r'\bplaceholder\s+(?:de\s+)?(?:conector|connector|api|integraci[oó]n)\b',
+        r'\b(?:conector|connector|api|integraci[oó]n)\b(?:\s+\w+){0,4}\s+placeholder\b',
         r'\[simulado\]',
         r'no\s+se\s+envió\s+nada',
         r'credenciales\s+no\s+configuradas',
