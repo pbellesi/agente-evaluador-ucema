@@ -1,7 +1,11 @@
 import os
+import inspect
+import subprocess
+import sys
 import time
 from datetime import datetime
 import streamlit as st
+from src import evidence_extractor
 from src.evaluator_engine import run_evaluation
 from src.schema import EvaluationResult
 from src.ui_feedback import generate_student_feedback
@@ -32,6 +36,44 @@ with st.sidebar:
     - Franco Forziati
     - Melisa Clark
     """)
+
+    with st.expander("🛠️ Diagnóstico técnico", expanded=False):
+        try:
+            runtime_head = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=os.path.dirname(os.path.abspath(__file__)),
+                capture_output=True,
+                check=True,
+                text=True,
+            ).stdout.strip()
+        except (OSError, subprocess.SubprocessError) as error:
+            runtime_head = f"No disponible: {error}"
+
+        contextual_patterns = [
+            r"r'\bplaceholder\b.{0,80}\b(?:conector|connector|api|integraci[oó]n)\b'",
+            r"r'\b(?:conector|connector|api|integraci[oó]n)\b.{0,80}\bplaceholder\b'",
+        ]
+        try:
+            extractor_source = inspect.getsource(evidence_extractor)
+            generic_placeholder_pattern = "r'placeholder'" in extractor_source
+            contextual_placeholder_patterns = [
+                pattern in extractor_source for pattern in contextual_patterns
+            ]
+            source_error = None
+        except (OSError, TypeError) as error:
+            generic_placeholder_pattern = None
+            contextual_placeholder_patterns = None
+            source_error = str(error)
+        st.json(
+            {
+                "runtime_git_head": runtime_head,
+                "evidence_extractor_module": evidence_extractor.__file__,
+                "generic_placeholder_pattern": generic_placeholder_pattern,
+                "contextual_placeholder_patterns": contextual_placeholder_patterns,
+                "source_inspection_error": source_error,
+                "python_version": sys.version,
+            }
+        )
 
     st.divider()
 
