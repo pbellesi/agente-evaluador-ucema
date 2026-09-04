@@ -158,3 +158,30 @@ No se realizó ningún ajuste a la rúbrica, al agente, a los casos ni a los pun
 ## Conclusión de calibración
 
 Los resultados conservados muestran coincidencia humano/agente en dos de los tres casos y detección de contradicciones en Tramposo. Se preservan el desacuerdo de Flojo, la inconsistencia del juicio humano inicial y la variación histórica del Tramposo. La falta de un registro humano previo independiente y de los outputs brutos limita la auditoría de la secuencia y de las ejecuciones completas; esta primera calibración no demuestra por sí sola repetibilidad plena ni resistencia a una prueba dirigida de prompt injection. Las aclaraciones hacen visibles esas limitaciones sin inventar evidencia ni modificar resultados. Cualquier ajuste futuro de rúbrica o agente requiere una decisión conceptual humana.
+
+## Validación externa / generalización
+
+Esta sección no reemplaza ni recalibra los tres casos oficiales (`excelente`, `flojo` y `tramposo`). Documenta validaciones posteriores sobre repositorios externos para comprobar comportamiento generalizable y ausencia de regresiones luego de depurar detectores de evidencia.
+
+### Hallazgo y corrección de falsos positivos
+
+En PULSO, revisión `0f0092a004169e6b64b0f0701eba3baf904cf7db`, una detección genérica de `placeholder` clasificó un uso legítimo de UI —incluido `LibraryPlaceholder` en la observación inicial— como conector dummy. El resultado observado pasó de **48,75** a **86,25** después del primer refinamiento. La validación de `Lapeque26/agente-trabajo-final`, revisión `2ec026cae6d4e2b75081db80d21c02f3a40e8118`, obtuvo **82,5** sin falsos positivos ni regresiones: 22 archivos inventariados, 22 cargados y 0 omitidos.
+
+El segundo hallazgo se produjo en `tubidj10/FinalAgentesIA`, revisión `107448a35eee3161665c8e9eb7e4a189470b4e31`. El atributo legítimo de interfaz `placeholder="checkout-api, payments-db, checkout-worker..."` era interpretado como dummy porque la regla buscaba `placeholder` cerca de `api`. El repositorio tenía 55 archivos inventariados, 55 cargados y 0 omitidos: la causa fue la clasificación, no la recuperación de contenido. El falso positivo activaba `has_dummy_connectors=true`, `system_type=partial_simulated_tool`, contradicciones artificiales e invalidaciones que degradaban D1, D2, D4 y D5.
+
+La corrección refinó sólo el contexto de `placeholder`: los atributos, props, variables e identificadores de UI no son evidencia de integración simulada; las frases que expresan un placeholder técnico de conector, API o integración sí continúan siéndolo. No se modificaron scoring, pesos, gates, reglas de invalidez, retrieval, rúbrica ni casos.
+
+### Pruebas y resultados observados
+
+Los tests de regresión verificaron explícitamente que `placeholder="checkout-api, payments-db"`, `placeholder="Ingresá tu API"`, `LibraryPlaceholder` y una variable de UI `placeholder` no son dummy; y que `API placeholder pendiente de implementar`, `placeholder connector`, `integración placeholder` y `placeholder de conector` sí lo son. Resultado: **20/20** tests OK.
+
+| Repositorio o caso | Antes | Después | Interpretación |
+|---|---:|---:|---|
+| Excelente | 82,5 | 82,5 | Sin regresión en benchmark interno. |
+| Flojo | 32,5 | 32,5 | Sin regresión en benchmark interno. |
+| Tramposo | 32,5 | 32,5 | Sin regresión; conserva otras evidencias dummy. |
+| PULSO | 86,25 | 86,25 | Sin regresión después del refinamiento contextual. |
+| Lapeque26 | 82,5 | 82,5 | Sin regresión ni falso positivo observado. |
+| tubidj10 | 40,0 | 90,0 | Se eliminó el falso positivo de UI; no se ajustó scoring para forzar el resultado. |
+
+La validación final en producción observó PULSO en **86,25** y tubidj10 en **90,0**. Estos puntajes no se presentan como una nota correcta absoluta: constituyen evidencia de que el detector corrigió una clasificación errónea generalizable sin alterar los benchmarks internos ni depender de los repositorios usados para construir el evaluador.
