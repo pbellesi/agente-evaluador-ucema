@@ -4,6 +4,7 @@ from datetime import datetime
 import streamlit as st
 from src.evaluator_engine import run_evaluation
 from src.schema import EvaluationResult
+from src.ui_feedback import generate_student_feedback
 
 # Configuración de página de Streamlit
 st.set_page_config(
@@ -75,7 +76,7 @@ with tab_single:
 
             st.divider()
 
-            # Resumen superior
+            # A. Repositorio + revisión SHA y B. Nota Final
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
                 st.subheader(f"📌 Repositorio: `{result.repository}`")
@@ -89,26 +90,58 @@ with tab_single:
                 else:
                     st.metric("Nota Final", "N/A")
 
-            # Alerta de Notas de Integridad si existen
-            if result.integrity_notes:
-                st.warning("⚠️ **Notas de Integridad y Alertas:**")
-                for note in result.integrity_notes:
-                    st.write(f"- {note}")
+            # C. Resumen visual D1-D5
+            st.subheader("📊 Resumen por Dimensiones Oficiales")
+            if result.dimensions:
+                d_cols = st.columns(len(result.dimensions))
+                for idx, dim in enumerate(result.dimensions):
+                    with d_cols[idx]:
+                        st.metric(
+                            label=f"D{idx+1}: {dim.dimension}",
+                            value=f"{dim.score:.2f} pts" if dim.score is not None else "0.00",
+                            delta=f"Nivel {dim.level_percent}%" if dim.level_percent is not None else "0%"
+                        )
 
-            # Sugerencia de mejora concreta
-            st.info(f"💡 **Sugerencia de Mejora Concreta:**\n\n{result.concrete_improvement}")
+            # D & E. Devolución al alumno evaluado y Contradicciones
+            feedback = generate_student_feedback(result)
 
-            # Desglose de las 5 Dimensiones
-            st.subheader("📊 Desglose por Dimensiones Oficiales")
+            st.divider()
+            st.subheader("🎓 Devolución al alumno evaluado")
 
-            if not result.dimensions:
-                st.error("No se obtuvieron dimensiones evaluadas debido a un error de acceso.")
-            else:
-                for dim in result.dimensions:
-                    with st.expander(
-                        f"**{dim.dimension}** — Puntaje: `{dim.score if dim.score is not None else 0}` / {dim.weight} pts (Nivel {dim.level_percent if dim.level_percent is not None else 0}%)",
-                        expanded=True
-                    ):
+            st.markdown(f"**Resumen general:**\n{feedback['resumen_general']}")
+
+            if feedback["fortalezas"]:
+                st.markdown("#### 🌱 Fortalezas")
+                for f in feedback["fortalezas"]:
+                    st.markdown(f"- **{f['dimension']}** ({f['level_percent']}%): {f['text']}")
+
+            if feedback["avances_parciales"]:
+                st.markdown("#### 📈 Avances parciales")
+                for a in feedback["avances_parciales"]:
+                    st.markdown(f"- **{a['dimension']}** ({a['level_percent']}%): {a['text']}")
+
+            if feedback["aspectos_a_mejorar"]:
+                st.markdown("#### 🎯 Aspectos a mejorar")
+                for m in feedback["aspectos_a_mejorar"]:
+                    st.markdown(f"- **{m['dimension']}** (Nivel actual: {m['level_percent']}%): {m['text']}")
+
+            if feedback["recomendacion_prioritaria"]:
+                st.info(f"💡 **Recomendación prioritaria:**\n\n{feedback['recomendacion_prioritaria']}")
+
+            if feedback["tiene_contradicciones"]:
+                st.warning("⚠️ **Evidencia que requiere revisión**\n\nSe identificaron las siguientes inconsistencias objetivas entre los artefactos documentados y la implementación ejecutable:")
+                for note in feedback["contradicciones"]:
+                    st.markdown(f"- {note}")
+
+            st.divider()
+
+            # F. Expander: Ver desglose técnico completo
+            with st.expander("🔍 Ver desglose técnico completo", expanded=False):
+                if not result.dimensions:
+                    st.error("No se obtuvieron dimensiones evaluadas debido a un error de acceso.")
+                else:
+                    for dim in result.dimensions:
+                        st.markdown(f"### **{dim.dimension}** — Puntaje: `{dim.score if dim.score is not None else 0}` / {dim.weight} pts (Nivel {dim.level_percent if dim.level_percent is not None else 0}%)")
                         d_col1, d_col2 = st.columns([1, 2])
                         with d_col1:
                             st.markdown(f"**Peso:** {dim.weight} pts")
@@ -117,7 +150,6 @@ with tab_single:
                         with d_col2:
                             st.markdown("**Justificación:**")
                             st.write(dim.justification)
-                            
                             if dim.missing_for_next_level:
                                 st.markdown("**Faltante para el siguiente nivel:**")
                                 st.caption(dim.missing_for_next_level)
@@ -128,6 +160,7 @@ with tab_single:
                                 st.markdown(f"- `{ev}`")
                         else:
                             st.write("_Sin evidencia citada_")
+                        st.divider()
 
 with tab_batch:
     st.subheader("📋 Evaluación por Lote de Repositorios (Hasta 50 URLs)")
