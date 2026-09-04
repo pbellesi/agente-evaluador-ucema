@@ -217,4 +217,17 @@ Las acciones fueron solicitadas y validadas por el coordinador. Codex no tomó d
 - Posibilidad de uso público directo sin ingresar API keys.
 - Riesgo restante: los gates determinísticos requieren calibración continua sobre repositorios reales para evitar falsos positivos/negativos.
 
+## DEC-016 — Depuración de falsos positivos de conectores dummy con validación externa
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi, coordinación, diagnóstico y validación de integración; revisión humana de la corrección.<br>
+**IA utilizada:** Codex, para inspección, implementación acotada de los detectores y ejecución de pruebas bajo instrucciones humanas.<br>
+**Contexto:** Durante validaciones sobre repositorios externos se detectaron falsos positivos al clasificar conectores dummy. En PULSO (`0f0092a004169e6b64b0f0701eba3baf904cf7db`), una regla genérica de `placeholder` interpretó un uso legítimo de UI —incluido el identificador `LibraryPlaceholder` en la observación inicial— como simulación; el resultado pasó de 48,75 a 86,25 tras el primer refinamiento. La validación posterior de `Lapeque26/agente-trabajo-final` (`2ec026cae6d4e2b75081db80d21c02f3a40e8118`) obtuvo 82,5 con 22 archivos inventariados, 22 cargados y 0 omitidos. Un segundo caso, `tubidj10/FinalAgentesIA` (`107448a35eee3161665c8e9eb7e4a189470b4e31`), mostró que `placeholder="checkout-api, payments-db, checkout-worker..."` en un atributo de UI era tomado como dummy por cercanía con `api`; el inventario completo (55/55 archivos cargados, 0 omitidos) confirmó que no era un problema de retrieval.<br>
+**Decisión:** Refinar exclusivamente la detección de `placeholder`: los atributos, props, variables e identificadores de UI no prueban una integración simulada; sólo se clasifican como dummy las frases que vinculan `placeholder` con conector, API o integración mediante contexto técnico explícito. Se mantuvieron sin cambios scoring, pesos, gates, reglas de invalidez, retrieval, rúbrica y casos.<br>
+**Alternativas descartadas:** No aumentar presupuestos de recuperación —el segundo caso tenía cobertura completa—, no eliminar por completo la señal `placeholder` —seguiría ocultando placeholders reales de integración— y no ajustar puntajes ni reglas de invalidez para un repositorio particular.<br>
+**Motivo:** Corregir una clasificación generalizable sin sobreajustar el evaluador a un caso ni dar crédito por declaraciones no verificadas.<br>
+**Impacto esperado:** Evitar contradicciones e invalidaciones artificiales cuando una interfaz usa placeholders legítimos, conservando la detección de expresiones como `API placeholder pendiente de implementar`, `placeholder connector`, `integración placeholder` y `placeholder de conector`.<br>
+**Evidencia / archivos relacionados:** Tests de regresión (20/20 OK) en `tests/test_placeholder_false_positive.py`; `src/evidence_extractor.py`; validaciones externas PULSO, Lapeque26 y tubidj10. No regresión: Excelente 82,5 → 82,5; Flojo 32,5 → 32,5; Tramposo 32,5 → 32,5; PULSO 86,25 → 86,25; Lapeque26 82,5 → 82,5; tubidj10 40,0 → 90,0. La validación final en producción registró PULSO 86,25 y tubidj10 90,0.<br>
+**Revisión futura:** Tratar estos resultados como evidencia de comportamiento y no como notas correctas absolutas. Mantener pruebas externas y benchmarks internos al modificar detectores de evidencia; el evaluador no se considera infalible.
+
 
