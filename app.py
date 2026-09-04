@@ -102,13 +102,15 @@ with tab_single:
         if not repo_url.strip():
             st.error("Por favor, ingresa una URL válida de GitHub.")
         else:
+            evaluation_diagnostics = {}
             with st.status("Evaluando repositorio...", expanded=True) as status:
                 st.write("🔍 Inspeccionando árbol y archivos del repositorio...")
                 st.write("📜 Extrayendo evidencia objetiva y aplicando gates determinísticos...")
                 
                 result = run_evaluation(
                     repo_url=repo_url.strip(),
-                    status_callback=lambda msg: st.write(f"⏳ {msg}")
+                    status_callback=lambda msg: st.write(f"⏳ {msg}"),
+                    diagnostics_callback=lambda data: evaluation_diagnostics.update(data),
                 )
                 
                 if result.evaluation_status == "completed":
@@ -131,6 +133,12 @@ with tab_single:
                     st.metric("Nota Final", f"{result.final_score} / 100")
                 else:
                     st.metric("Nota Final", "N/A")
+
+            with st.expander("🔍 Diagnóstico de la corrida", expanded=False):
+                st.json(
+                    evaluation_diagnostics
+                    or {"status": "No disponible: la evaluación no produjo datos de diagnóstico."}
+                )
 
             # C. Resumen visual D1-D5
             st.subheader("📊 Resumen por Dimensiones Oficiales")
