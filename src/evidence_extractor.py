@@ -157,11 +157,12 @@ def extract_objective_evidence(repo_data: dict) -> dict:
             ])
             has_change = any(kw in sec_lower for kw in [
                 "decisión", "decidimos", "cambio", "se definió", "se definieron", "se redujo", 
-                "elegimos", "migramos", "adoptamos", "incorporamos", "implementamos", "solución", "integrar", "determinó", "diseño", "se adoptó"
+                "elegimos", "migramos", "adoptamos", "incorporamos", "implementamos", "solución", "integrar", "determinó", "diseño", "se adoptó", "se retiró", "se ejecutaron"
             ])
             has_impact = any(kw in sec_lower for kw in [
                 "impacto", "motivo", "resultado", "evidencia", "efecto", "beneficio", 
-                "permite", "produjo", "evita", "consecuencia", "ahorro", "mejora", "conservan", "garantizar", "asegurar", "calificación"
+                "permite", "produjo", "evita", "consecuencia", "ahorro", "mejora", "conservan", "garantizar", "asegurar", "calificación",
+                "limitación", "documentada", "documentado", "registrada", "registrado", "quedó", "quedaron", "mantiene", "firma", "revisa"
             ])
 
             if is_explicit or (has_context and has_change and has_impact):
