@@ -77,7 +77,9 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     dummy_patterns = [
         r'conectado"\s*:\s*false',
         r'return\s*\{\s*"conectado"\s*:\s*false',
-        r'placeholder',
+        # Un placeholder de UI o texto aislado no demuestra un conector simulado.
+        r'\bplaceholder\b.{0,80}\b(?:conector|connector|api|integraci[oó]n)\b',
+        r'\b(?:conector|connector|api|integraci[oó]n)\b.{0,80}\bplaceholder\b',
         r'\[simulado\]',
         r'no\s+se\s+envió\s+nada',
         r'credenciales\s+no\s+configuradas',
