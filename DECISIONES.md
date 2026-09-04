@@ -181,3 +181,40 @@ Las acciones fueron solicitadas y validadas por el coordinador. Codex no tomó d
 **Impacto esperado:** Portada y estado final coherentes con las fuentes, sin borrar las decisiones históricas ni presentar una historia perfecta.<br>
 **Evidencia / archivos relacionados:** Consignas en `00_fuentes/consigna/`; DEC-006 y DEC-008; `rubrica.md`; commit `7de9dad` del [PR #8](https://github.com/pbellesi/agente-evaluador-ucema/pull/8); [Issue #17](https://github.com/pbellesi/agente-evaluador-ucema/issues/17).<br>
 **Revisión futura:** Mantener visible la jerarquía y documentar cualquier nueva aclaración respaldada, sin reinterpretar retroactivamente la historia.
+
+## DEC-015 — Migración del runtime generativo a motor determinístico Zero-API
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi, coordinación y arquitectura.<br>
+**IA utilizada:** Antigravity (Google DeepMind) durante desarrollo, auditoría y calibración.<br>
+**Contexto:**
+- La primera interfaz ejecutable utilizaba la API de Gemini para interpretar `rubrica.md` y `agente/system_prompt.md`.
+- En corridas consecutivas de test-retest se observó variabilidad del LLM (flojo: 21.25 vs 25.00; tramposo: 22.50 vs 33.75; delta de hasta 11.25 pts).
+- Se tomó en cuenta la recomendación docente de evitar depender de APIs generativas por la variabilidad del resultado y para permitir la evaluación masiva de trabajos.
+- Se fijó como restricción de arquitectura que la aplicación final debe funcionar sin costo por uso de APIs generativas para el usuario final y sin requerir API keys, sujeto a los límites normales del hosting y GitHub.
+
+**Decisión:**
+- Mantener `rubrica.md` como fuente normativa de evaluación.
+- Sustituir el scoring generativo en runtime por un motor determinístico en Python basado en Gates de Evidencia Objetiva (matriz 5x5).
+- Mantener acceso de red exclusivamente para obtener e inspeccionar repositorios públicos de GitHub.
+- Eliminar la dependencia en runtime de APIs generativas (Gemini, OpenAI, Anthropic) y la exigencia de claves de API.
+- Resolver y registrar el commit SHA exacto de cada trabajo evaluado.
+- Mantener y automatizar las reglas de invalidez por contradicción de evidencia.
+- La IA puede utilizarse durante el desarrollo, auditoría y calibración, pero no decide la nota en producción.
+
+**Evidencia / Resultado:**
+- Test-retest V2:
+  - `excelente`: 82.50 / 82.50
+  - `flojo`: 32.50 / 32.50
+  - `tramposo`: 32.50 / 32.50
+  - Delta = 0.00 en todos los casos.
+- El runtime V2 no utiliza modelos generativos; tokens generativos por evaluación = 0.
+- Costo generativo por evaluación: USD 0.
+
+**Impacto / Consecuencias:**
+- Scoring determinístico: para el mismo commit evaluado y la misma versión del evaluador, el test-retest produjo delta = 0.00 en los benchmarks.
+- Eliminación de costos operativos de APIs generativas y dependencias de cuotas o credenciales externas.
+- Posibilidad de uso público directo sin ingresar API keys.
+- Riesgo restante: los gates determinísticos requieren calibración continua sobre repositorios reales para evitar falsos positivos/negativos.
+
+
