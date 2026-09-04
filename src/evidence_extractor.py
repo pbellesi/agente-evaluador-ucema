@@ -1,6 +1,40 @@
-import os
 import re
-from typing import Dict, List, Any, Set
+from typing import Dict, List
+
+from src.github_fetcher import CODE_EXTENSIONS, classify_path
+
+
+def _inventory_records(repo_data: dict, file_contents: Dict[str, str]) -> List[dict]:
+    """Mantiene compatibilidad con entradas anteriores sin inventario estructurado."""
+    inventory = repo_data.get("repository_inventory")
+    if inventory:
+        return sorted(inventory, key=lambda record: record["path"].lower())
+    return [classify_path(path, len(content.encode("utf-8"))) for path, content in sorted(file_contents.items())]
+
+
+def _coverage(records: List[dict], loaded_paths: List[str], label: str = "", category: str = "") -> dict:
+    candidates = [
+        record for record in records
+        if (not label or label in record.get("labels", [])) and (not category or record["category"] == category)
+    ]
+    paths = [record["path"] for record in candidates]
+    loaded = [path for path in paths if path in loaded_paths]
+    return {
+        "status": "loaded" if loaded else ("skipped" if paths else "absent"),
+        "inventory_paths": paths,
+        "loaded_paths": loaded,
+    }
+
+
+def _combined_content(paths: List[str], file_contents: Dict[str, str]) -> str:
+    return "\n\n".join(f"--- {path} ---\n{file_contents[path]}" for path in paths if path in file_contents)
+
+
+def _is_code_file(path: str, content: str) -> bool:
+    extension = path[path.rfind("."):].lower() if "." in path.rsplit("/", 1)[-1] else ""
+    if extension in CODE_EXTENSIONS:
+        return True
+    return extension == ".html" and bool(re.search(r"<script|type=['\"]module|onclick=|addEventListener", content, re.IGNORECASE))
 
 
 def extract_objective_evidence(repo_data: dict) -> dict:
@@ -10,7 +44,8 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     incompatibilidades y contradicciones verificables.
     """
     file_contents: Dict[str, str] = repo_data.get("file_contents", {})
-    all_paths: Set[str] = set(file_contents.keys())
+    all_paths = sorted(file_contents)
+    inventory = _inventory_records(repo_data, file_contents)
 
     # Normalización de paths a minúsculas para comparaciones agnósticas
     path_map = {p.lower(): p for p in all_paths}
@@ -34,11 +69,7 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     # -------------------------------------------------------------------------
     # 2. Análisis de Código e Implementación (Agnóstico de lenguaje y SDK)
     # -------------------------------------------------------------------------
-    code_files = [
-        p for p in all_paths 
-        if any(p.endswith(ext) for ext in [".py", ".js", ".ts", ".sh", ".pyc"]) or 
-           any(folder in p.lower() for folder in ["src/", "app/", "lib/", "scripts/"])
-    ]
+    code_files = [p for p in all_paths if _is_code_file(p, file_contents.get(p, ""))]
 
     has_code = len(code_files) > 0
 
@@ -173,12 +204,15 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     # -------------------------------------------------------------------------
     # 6. Análisis Económico (docs/analisis_economico.md o README)
     # -------------------------------------------------------------------------
-    econ_content = ""
-    econ_file_path = next((p for p in all_paths if "analisis_economico" in p.lower() or "costos" in p.lower()), None)
-    if econ_file_path:
-        econ_content = file_contents.get(econ_file_path, "")
-    elif has_readme:
-        econ_content = file_contents.get(next(p for p in all_paths if "readme" in p.lower()), "")
+    econ_coverage = _coverage(inventory, all_paths, label="economics")
+    econ_paths = econ_coverage["loaded_paths"]
+    if econ_paths:
+        econ_content = _combined_content(econ_paths, file_contents)
+    elif econ_coverage["status"] == "absent" and has_readme:
+        econ_paths = [next(p for p in all_paths if "readme" in p.lower())]
+        econ_content = _combined_content(econ_paths, file_contents)
+    else:
+        econ_content = ""
 
     has_tokens_num = bool(re.search(r'\d+[\.\,]?\d*\s*tokens', econ_content, re.IGNORECASE))
     has_cost_num = bool(re.search(r'(usd|\$)\s*\d+', econ_content, re.IGNORECASE))
@@ -188,12 +222,15 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     # -------------------------------------------------------------------------
     # 7. Análisis de Gobierno y Riesgo (docs/gobierno_riesgo.md o README)
     # -------------------------------------------------------------------------
-    gov_content = ""
-    gov_file_path = next((p for p in all_paths if "gobierno" in p.lower() or "riesgo" in p.lower()), None)
-    if gov_file_path:
-        gov_content = file_contents.get(gov_file_path, "")
-    elif has_readme:
-        gov_content = file_contents.get(next(p for p in all_paths if "readme" in p.lower()), "")
+    gov_coverage = _coverage(inventory, all_paths, label="governance")
+    gov_paths = gov_coverage["loaded_paths"]
+    if gov_paths:
+        gov_content = _combined_content(gov_paths, file_contents)
+    elif gov_coverage["status"] == "absent" and has_readme:
+        gov_paths = [next(p for p in all_paths if "readme" in p.lower())]
+        gov_content = _combined_content(gov_paths, file_contents)
+    else:
+        gov_content = ""
 
     gov_axes = {
         "permissions": bool(re.search(r'(permiso|sistema|datos|acceso)', gov_content, re.IGNORECASE)),
@@ -267,6 +304,15 @@ def extract_objective_evidence(repo_data: dict) -> dict:
             "has_model_choice": has_model_choice
         },
         "gov_axes": gov_axes,
+        "coverage": {
+            "implementation": _coverage(inventory, all_paths, category="implementation"),
+            "economics": econ_coverage,
+            "governance": gov_coverage,
+            "prompts": _coverage(inventory, all_paths, category="prompts"),
+            "runs": _coverage(inventory, all_paths, category="runs"),
+            "tests": _coverage(inventory, all_paths, category="tests"),
+        },
+        "evidence_sources": {"economics": econ_paths, "governance": gov_paths},
         "contradictions": contradictions,
         "invalidated_evidence": invalidated_evidence
     }

@@ -6,6 +6,10 @@ from src.schema import EvaluationResult, DimensionResult
 from src.evidence_extractor import extract_objective_evidence
 
 
+def _coverage_limited(ev: dict, key: str) -> bool:
+    return ev.get("coverage", {}).get(key, {}).get("status") == "skipped"
+
+
 def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
     """
     Ejecuta la evaluación determinística de un repositorio aplicando
@@ -27,8 +31,12 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
     
     if not ev["has_code"]:
         lvl1 = 0
-        just1 = "No se encontraron scripts de código ejecutable ni estructura básica de sistema."
-        missing1 = "Incorporar la implementación del agente o script de procesamiento ejecutable."
+        if _coverage_limited(ev, "implementation"):
+            just1 = "Hay archivos de implementación en el inventario, pero no fueron inspeccionados completamente por límites de recuperación."
+            missing1 = "Reevaluar con cobertura de recuperación suficiente para inspeccionar los archivos de implementación existentes."
+        else:
+            just1 = "No se encontraron scripts de código ejecutable ni estructura básica de sistema."
+            missing1 = "Incorporar la implementación del agente o script de procesamiento ejecutable."
     elif ev["has_dummy_connectors"]:
         lvl1 = 25
         ev1 = ev["found_dummies"]
@@ -200,8 +208,12 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         missing4 = "Alinear las métricas económicas con ejecuciones reales de un modelo de IA o presentar una estimación cualitativa genuina."
     elif not econ["has_tokens_num"] and not econ["has_cost_num"] and not econ["has_projections"]:
         lvl4 = 0
-        just4 = "No se encontraron cifras verificables ni estimaciones de tokens, costos o proyecciones."
-        missing4 = "Crear el archivo docs/analisis_economico.md con estimación o medición de costos."
+        if _coverage_limited(ev, "economics"):
+            just4 = "Existe documentación económica en el inventario, pero no fue inspeccionada completamente por límites de recuperación."
+            missing4 = "Reevaluar con cobertura de recuperación suficiente para inspeccionar la documentación económica existente."
+        else:
+            just4 = "No se encontraron cifras verificables ni estimaciones de tokens, costos o proyecciones."
+            missing4 = "Crear el archivo docs/analisis_economico.md con estimación o medición de costos."
     elif econ["has_model_choice"] and not (econ["has_tokens_num"] and econ["has_cost_num"]):
         lvl4 = 25
         ev4 = ["Mención cualitativa de modelo o costo en documentación"]
@@ -250,8 +262,12 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
 
     if active_axes_count == 0:
         lvl5 = 0
-        just5 = "No se encontró documentación de gobierno y riesgo ni mención de controles de seguridad."
-        missing5 = "Crear el archivo docs/gobierno_riesgo.md detallando sistemas, permisos, fallas y supervisión."
+        if _coverage_limited(ev, "governance"):
+            just5 = "Existe documentación de gobierno o riesgo en el inventario, pero no fue inspeccionada completamente por límites de recuperación."
+            missing5 = "Reevaluar con cobertura de recuperación suficiente para inspeccionar la documentación de gobierno existente."
+        else:
+            just5 = "No se encontró documentación de gobierno y riesgo ni mención de controles de seguridad."
+            missing5 = "Crear el archivo docs/gobierno_riesgo.md detallando sistemas, permisos, fallas y supervisión."
     elif active_axes_count == 1:
         lvl5 = 25
         ev5 = [f"Eje de gobierno identificado: {[k for k,v in g.items() if v][0]}"]
