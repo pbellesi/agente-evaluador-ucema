@@ -1,5 +1,9 @@
 # Agente Corrector — Primera versión funcional
 
+## Estado actual
+
+Esta carpeta preserva la especificación, prompts y validación de la primera versión del corrector como evidencia de la evolución del proyecto. La implementación ejecutable final está en `../src/` y `../app.py`: es un runtime determinístico que recupera repositorios públicos de GitHub, fija la revisión evaluada y no usa APIs generativas en producción. Los prompts históricos no se eliminan ni se presentan como el runtime vigente.
+
 ## Propósito
 Evaluar repositorios de trabajos finales del curso "Programación de y con Agentes de IA" (UCEMA) aplicando la `rubrica.md` V2 autoritativa del repositorio del Agente Evaluador.
 

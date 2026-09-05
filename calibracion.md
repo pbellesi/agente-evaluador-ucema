@@ -185,3 +185,23 @@ Los tests de regresión verificaron explícitamente que `placeholder="checkout-a
 | tubidj10 | 40,0 | 90,0 | Se eliminó el falso positivo de UI; no se ajustó scoring para forzar el resultado. |
 
 La validación final en producción observó PULSO en **86,25** y tubidj10 en **90,0**. Estos puntajes no se presentan como una nota correcta absoluta: constituyen evidencia de que el detector corrigió una clasificación errónea generalizable sin alterar los benchmarks internos ni depender de los repositorios usados para construir el evaluador.
+
+## Cierre posterior: contrato sintético y validación final
+
+La calibración histórica preservada arriba mantuvo el orden humano primero → agente después, los desacuerdos encontrados y sus limitaciones de trazabilidad. Las correcciones posteriores no reescribieron esos resultados: separaron tres actividades que cumplen funciones distintas.
+
+1. **Calibración:** comparación entre juicio humano y corrector sobre los tres casos oficiales, con desacuerdos y límites registrados.
+2. **Aceptación sintética:** cada posible clase de error observada se convirtió primero en un caso mínimo derivado de la rúbrica, con expectativa fijada antes de ejecutar. Sólo entonces se ajustó el motor contra ese contrato.
+3. **Generalización externa:** los repositorios externos se usaron para detectar clases de error y luego para verificar regresión; no definieron puntajes esperados ni reglas para repositorios concretos.
+
+El ciclo posterior llegó a **31/31 acceptance tests** y **69/69 pruebas de la suite completa**. La evaluación final de los casos oficiales fue:
+
+| Caso | Puntaje final | Niveles D1–D5 |
+|---|---:|---|
+| Excelente | 88,75 | 100 / 100 / 100 / 25 / 100 |
+| Flojo | 28,75 | 50 / 25 / 25 / 0 / 25 |
+| Tramposo | 21,25 | 25 / 25 / 25 / 0 / 25 |
+
+El Tramposo sigue siendo una prueba adversarial válida: conserva conectores dummy, contradicciones entre documentación e implementación e invalidación de evidencia atribuida a esas contradicciones. Por eso su documentación inflada no se traduce en crédito de ejecución o reproducibilidad real.
+
+Este cierre no afirma que las heurísticas sean infalibles ni reemplaza la calibración histórica. Fija un procedimiento reproducible para cambios futuros: un bug objetivo nuevo debe convertirse antes en evidencia y prueba sintética, y los repositorios externos sólo vuelven a intervenir como control de generalización.

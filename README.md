@@ -2,9 +2,11 @@
 
 ## Qué construí
 
-Construimos un agente evaluador para docentes y correctores de **Programación de y con Agentes de IA — MBA UCEMA**, destinado a evaluar los repositorios individuales del trabajo final.<br>
-Recibe un repositorio objetivo y aplica la rúbrica ejecutable del equipo, basada en las dimensiones y pesos oficiales del trabajo final.<br>
-Devuelve puntajes por dimensión, evidencia citada, justificación, puntaje final y exactamente una mejora concreta.
+Construimos un evaluador determinístico de repositorios públicos de GitHub para docentes y correctores de **Programación de y con Agentes de IA — MBA UCEMA**. Aplica la rúbrica ejecutable del equipo a los trabajos finales individuales y devuelve puntajes por dimensión, evidencia citada, justificación, puntaje final y una mejora concreta.
+
+La arquitectura final es: **URL de GitHub → resolución e inventario del SHA exacto → extracción objetiva de evidencia → motor determinístico → score estructurado y feedback determinístico → interfaz Streamlit**.
+
+El runtime no usa APIs ni modelos generativos: los tokens generativos por evaluación son **0** y el costo de API generativa por evaluación es **USD 0**. Sí realiza llamadas de red de lectura a GitHub para resolver la revisión y recuperar el repositorio público. La repetibilidad se vincula al SHA evaluado y a la versión del evaluador.
 
 ## Cómo se lo pedí
 
@@ -688,7 +690,8 @@ Las cuatro piezas obligatorias están completas e integradas en `main`, con las 
 | Pieza | Qué contiene y qué se comprobó | Evidencia |
 |---|---|---|
 | Rúbrica ejecutable V2 | Cinco dimensiones: Sistema completo y funcionando (30), Proceso documentado (25), Formato y reproducibilidad (15), Análisis económico (15) y Gobierno y riesgo (15). Cada dimensión tiene cinco niveles, evidencia y ejemplos. | [rubrica.md](rubrica.md), PRs #6 y #8 |
-| Agente corrector v1 | Contrato de lectura e inventario del repo objetivo, contraste de evidencia, puntuación y JSON fijo con una mejora concreta. La validación manual inicial conserva una salida completa. | [agente/README.md](agente/README.md), [system prompt](agente/system_prompt.md), [validación inicial](agente/validacion_caso_tramposo.md), PR #14 |
+| Runtime determinístico final | Recupera un repositorio público por URL, fija su SHA, extrae evidencia observable, aplica el contrato de la rúbrica sin modelo generativo y produce el resultado estructurado en Streamlit. | [app.py](app.py), [src/](src/), DEC-015, PR #31 |
+| Corrector v1 histórico | Contrato de lectura, contraste de evidencia, puntuación y JSON fijo que antecedió al runtime final. La validación manual inicial conserva una salida completa. | [agente/README.md](agente/README.md), [system prompt](agente/system_prompt.md), [validación inicial](agente/validacion_caso_tramposo.md), PR #14 |
 | Tres casos de prueba | Excelente fuerte con limitaciones; flojo incompleto y evaluable; tramposo con declaraciones infladas que el corrector contrastó con los artefactos. | [excelente](casos/excelente/), [flojo](casos/flojo/), [tramposo](casos/tramposo/), PRs #11 y #15 |
 | Calibración humano/agente | Comparación de los tres casos por las cinco dimensiones, evidencias, desacuerdos y limitaciones conservados. | [calibracion.md](calibracion.md), PR #16 |
 
@@ -696,11 +699,21 @@ La escala **0% / 25% / 50% / 75% / 100%** es una convención de diseño del equi
 
 ### Flujo del evaluador
 
-Repositorio objetivo → inspección de evidencia → aplicación de `rubrica.md` → puntaje por dimensión → evidencia y justificación → puntaje final → una mejora concreta.
+URL de GitHub → resolución e inventario del SHA → extracción de evidencia → aplicación determinística de `rubrica.md` → puntaje por dimensión → evidencia y justificación → puntaje final → una mejora concreta.
+
+La metodología de cierre fue: **rúbrica → contrato → acceptance tests sintéticos → motor → regresión sobre casos oficiales → regresión externa**. Los repositorios externos sirvieron para comprobar generalización, no para fijar notas objetivo.
 
 La validación inicial contra Tramposo documenta diferencias entre README, implementación, tests y outputs: las afirmaciones de integración, precisión y producción no bastaron para obtener crédito por esas capacidades. Es una validación manual asistida, con el alcance descrito en su registro.
 
-### Cómo usarlo realmente
+### Ejecución final
+
+1. Instalar las dependencias declaradas en `requirements.txt`.
+2. Ejecutar `streamlit run app.py`.
+3. Ingresar una URL pública de GitHub. El runtime resuelve la revisión exacta, la muestra en el resultado y evalúa ese contenido.
+
+No se solicitan API keys ni se efectúan llamadas a proveedores generativos durante la evaluación. La disponibilidad depende de GitHub, de la red y del entorno de hosting.
+
+### Uso histórico del corrector v1
 
 1. Cargar el contenido completo de [agente/system_prompt.md](agente/system_prompt.md) en una herramienta de IA compatible con instrucciones de sistema y acceso real de lectura al repositorio.
 2. Proporcionar el contenido completo de la **rúbrica autoritativa de este repositorio**, [rubrica.md](rubrica.md), como artefacto separado.
@@ -710,7 +723,7 @@ La validación inicial contra Tramposo documenta diferencias entre README, imple
 
 El contrato conserva las mismas claves, identificación de la revisión, estado de evaluación y notas de integridad. En 100%, `missing_for_next_level` es `null`. Si no puede acceder a la rúbrica o al objetivo en absoluto, prescribe `evaluation_status: "access_error"` con puntajes `null`. Estos son comportamientos especificados por el contrato; no se presentan como pruebas adicionales realizadas en esta actualización.
 
-La v1 se utiliza mediante una herramienta de IA con capacidad de inspección; no tiene una CLI ni una API propia. El procedimiento completo está en [agente/README.md](agente/README.md).
+La v1 se utilizaba mediante una herramienta de IA con capacidad de inspección; no tenía una CLI ni una API propia. Se preserva como evidencia del proceso y su procedimiento completo está en [agente/README.md](agente/README.md).
 
 ### Casos y resultados observados
 
@@ -725,6 +738,18 @@ La calibración del **2 de septiembre de 2026** registró:
 Son resultados observados, **no objetivos prefijados**. El excelente no se construyó para forzar 100 ni el flojo para forzar 0. Se preservaron el desacuerdo de Flojo, la inconsistencia del juicio humano y la variación histórica del Tramposo. [calibracion.md](calibracion.md) contiene el detalle por dimensión.
 
 La validación inicial del excelente había registrado 83,75; la auditoría final del [PR #15](https://github.com/pbellesi/agente-evaluador-ucema/pull/15) registró 82,5 por la limitación económica: no se dispone de tokens ni costo real por corrida. No se reemplazó el resultado histórico.
+
+### Validación final del motor congelado
+
+La validación posterior, separada de la calibración histórica, confirmó el contrato actual mediante **31/31 acceptance tests** y **69/69 pruebas de la suite completa**. Los casos oficiales se evaluaron nuevamente con estos resultados:
+
+| Caso | Puntaje final | Niveles D1–D5 |
+|---|---:|---|
+| Excelente | 88,75 | 100 / 100 / 100 / 25 / 100 |
+| Flojo | 28,75 | 50 / 25 / 25 / 0 / 25 |
+| Tramposo | 21,25 | 25 / 25 / 25 / 0 / 25 |
+
+El Tramposo conserva dummies, contradicciones e invalidación de evidencia: muestra que las declaraciones infladas no sustituyen a la implementación observable.
 
 ### Estructura del repositorio
 
@@ -779,9 +804,9 @@ La jerarquía es: consigna oficial del parcial → consigna/rúbrica oficial del
 - **Prompts de construcción:** los pedidos de Issues están preservados, pero no todas las conversaciones ni los mensajes completos de cada ejecución. Las citas de **Cómo se lo pedí** distinguen lo verificable de lo no conservado.
 - **Ambigüedades del contrato:** las “seis piezas” y los límites exactos de L0–L4 siguen abiertos en la rúbrica. La v1 también conserva su nota histórica sobre el README estándar; esta tarea incorpora la plantilla informada al README del parcial sin modificar el agente ni la rúbrica.
 
-Las limitaciones anteriores están respaldadas por [calibracion.md](calibracion.md), [agente/README.md](agente/README.md) y [DECISIONES.md](DECISIONES.md). El umbral ±10 es sólo un criterio interno de análisis. **Re-test posterior: no realizado / no aplica**, porque no hubo ajustes de rúbrica ni agente tras esa calibración. No se presentan CI, una CLI propia o una prueba adicional no exigida como entregables faltantes.
+Las limitaciones anteriores describen la primera calibración y están respaldadas por [calibracion.md](calibracion.md), [agente/README.md](agente/README.md) y [DECISIONES.md](DECISIONES.md). El re-test de aquella calibración histórica no se recreó retroactivamente; la validación posterior del motor es un ciclo separado, trazado mediante el contrato sintético y las pruebas de aceptación.
 
-Las cuatro piezas están integradas. Quedan revisar e integrar este ajuste documental y completar la revisión final y entrega del enlace en el campus; la presentación en campus no está acreditada por el repositorio.
+Las cuatro piezas están integradas. Persisten límites reales: disponibilidad de GitHub, red y hosting; heurísticas determinísticas que pueden requerir corrección ante un bug objetivo nuevo; y la ausencia de inmunidad absoluta frente a prompt injection. El contenido del repositorio se trata como datos, no como instrucciones, y las señales de manipulación se reportan como contradicciones o invalidaciones cuando la evidencia lo justifica.
 
 ## Qué aprendí
 
