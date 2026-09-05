@@ -8,7 +8,7 @@ import streamlit as st
 from src import evidence_extractor
 from src.evaluator_engine import run_evaluation
 from src.schema import EvaluationResult
-from src.ui_feedback import generate_student_feedback
+from src.ui_feedback import clean_text, format_aspect_description, generate_student_feedback
 
 # Configuración de página de Streamlit
 st.set_page_config(
@@ -321,21 +321,64 @@ with tab_batch:
                 d3 = f"{dims[2].score:.2f}" if len(dims) > 2 and dims[2].score is not None else "0.00"
                 d4 = f"{dims[3].score:.2f}" if len(dims) > 3 and dims[3].score is not None else "0.00"
                 d5 = f"{dims[4].score:.2f}" if len(dims) > 4 and dims[4].score is not None else "0.00"
+                status_detail = res.evaluation_status.upper()
+                if res.evaluation_status != "completed" and res.integrity_notes:
+                    status_detail = f"{status_detail}: {res.integrity_notes[0]}"
 
                 table_rows.append({
                     "#": i,
                     "repositorio": res.repository,
                     "revisión evaluada": res.evaluated_revision,
-                    "estado": res.evaluation_status.upper(),
+                    "estado / error": status_detail,
                     "nota final": f"{res.final_score:.2f}" if res.final_score is not None else "N/A",
                     "D1": d1,
                     "D2": d2,
                     "D3": d3,
                     "D4": d4,
                     "D5": d5,
-                    "contradicciones detectadas": len(res.integrity_notes),
-                    "sugerencia principal": res.concrete_improvement
                 })
 
             st.dataframe(table_rows, use_container_width=True)
+
+            st.subheader("🎓 Devolución por trabajo")
+            for i, res in enumerate(batch_results, start=1):
+                score_label = f"{res.final_score:.2f} puntos" if res.final_score is not None else "sin puntaje"
+                with st.expander(f"▶ {res.repository} — {score_label}", expanded=False):
+                    if res.evaluation_status != "completed":
+                        error_detail = "; ".join(res.integrity_notes) or "No se pudo completar la evaluación."
+                        st.error(error_detail)
+                        continue
+
+                    if not res.dimensions:
+                        st.warning("La evaluación finalizó sin dimensiones para generar devolución.")
+                        continue
+
+                    feedback = generate_student_feedback(res)
+                    st.markdown("### Devolución al alumno")
+                    st.write(feedback["resumen_general"])
+
+                    st.markdown("### Fortalezas")
+                    if feedback["fortalezas"]:
+                        dimensions_by_name = {dim.dimension: dim for dim in res.dimensions}
+                        for strength in feedback["fortalezas"][:3]:
+                            source = dimensions_by_name.get(strength["dimension"])
+                            evidence = source.evidence[0] if source and source.evidence else "Sin evidencia citada"
+                            st.markdown(f"- **{strength['dimension']}** ({strength['level_percent']}%): {strength['text']} — Evidencia: `{evidence}`")
+                    else:
+                        st.caption("No se identificaron fortalezas suficientemente demostradas.")
+
+                    st.markdown("### Aspectos a mejorar")
+                    if feedback["aspectos_a_mejorar"]:
+                        for aspect in feedback["aspectos_a_mejorar"][:3]:
+                            st.markdown(f"- **{aspect['dimension']}** ({aspect['level_percent']}%): {aspect['text']}")
+                    else:
+                        st.caption("No se identificaron aspectos pendientes fuera de los avances parciales.")
+
+                    st.markdown("### Prioridad principal")
+                    weakest_index, weakest_dim = min(
+                        enumerate(res.dimensions),
+                        key=lambda item: ((item[1].level_percent or 0), item[0]),
+                    )
+                    priority = clean_text(format_aspect_description(weakest_dim)) or feedback["recomendacion_prioritaria"]
+                    st.info(f"**{weakest_dim.dimension}:** {priority}")
 
