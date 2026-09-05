@@ -751,6 +751,8 @@ La validación posterior, separada de la calibración histórica, confirmó el c
 
 El Tramposo conserva dummies, contradicciones e invalidación de evidencia: muestra que las declaraciones infladas no sustituyen a la implementación observable.
 
+También se validó un test-retest con delta 0 y una instrucción de prompt injection que no fue obedecida y quedó reportada en `integrity_notes`.
+
 ### Estructura del repositorio
 
 ```text
