@@ -37,43 +37,51 @@ with st.sidebar:
     - Melisa Clark
     """)
 
-    with st.expander("🛠️ Diagnóstico técnico", expanded=False):
-        try:
-            runtime_head = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=os.path.dirname(os.path.abspath(__file__)),
-                capture_output=True,
-                check=True,
-                text=True,
-            ).stdout.strip()
-        except (OSError, subprocess.SubprocessError) as error:
-            runtime_head = f"No disponible: {error}"
+    technical_mode = st.toggle(
+        "Modo técnico",
+        value=False,
+        help="Muestra diagnósticos de runtime y de corrida. No altera la evaluación.",
+        key="technical_mode",
+    )
 
-        contextual_patterns = [
-            r"r'\bplaceholder\b.{0,80}\b(?:conector|connector|api|integraci[oó]n)\b'",
-            r"r'\b(?:conector|connector|api|integraci[oó]n)\b.{0,80}\bplaceholder\b'",
-        ]
-        try:
-            extractor_source = inspect.getsource(evidence_extractor)
-            generic_placeholder_pattern = "r'placeholder'" in extractor_source
-            contextual_placeholder_patterns = [
-                pattern in extractor_source for pattern in contextual_patterns
+    if technical_mode:
+        with st.expander("🛠️ Diagnóstico técnico", expanded=False):
+            try:
+                runtime_head = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=os.path.dirname(os.path.abspath(__file__)),
+                    capture_output=True,
+                    check=True,
+                    text=True,
+                ).stdout.strip()
+            except (OSError, subprocess.SubprocessError) as error:
+                runtime_head = f"No disponible: {error}"
+
+            contextual_patterns = [
+                r"r'\bplaceholder\b.{0,80}\b(?:conector|connector|api|integraci[oó]n)\b'",
+                r"r'\b(?:conector|connector|api|integraci[oó]n)\b.{0,80}\bplaceholder\b'",
             ]
-            source_error = None
-        except (OSError, TypeError) as error:
-            generic_placeholder_pattern = None
-            contextual_placeholder_patterns = None
-            source_error = str(error)
-        st.json(
-            {
-                "runtime_git_head": runtime_head,
-                "evidence_extractor_module": evidence_extractor.__file__,
-                "generic_placeholder_pattern": generic_placeholder_pattern,
-                "contextual_placeholder_patterns": contextual_placeholder_patterns,
-                "source_inspection_error": source_error,
-                "python_version": sys.version,
-            }
-        )
+            try:
+                extractor_source = inspect.getsource(evidence_extractor)
+                generic_placeholder_pattern = "r'placeholder'" in extractor_source
+                contextual_placeholder_patterns = [
+                    pattern in extractor_source for pattern in contextual_patterns
+                ]
+                source_error = None
+            except (OSError, TypeError) as error:
+                generic_placeholder_pattern = None
+                contextual_placeholder_patterns = None
+                source_error = str(error)
+            st.json(
+                {
+                    "runtime_git_head": runtime_head,
+                    "evidence_extractor_module": evidence_extractor.__file__,
+                    "generic_placeholder_pattern": generic_placeholder_pattern,
+                    "contextual_placeholder_patterns": contextual_placeholder_patterns,
+                    "source_inspection_error": source_error,
+                    "python_version": sys.version,
+                }
+            )
 
     st.divider()
 
@@ -134,11 +142,12 @@ with tab_single:
                 else:
                     st.metric("Nota Final", "N/A")
 
-            with st.expander("🔍 Diagnóstico de la corrida", expanded=False):
-                st.json(
-                    evaluation_diagnostics
-                    or {"status": "No disponible: la evaluación no produjo datos de diagnóstico."}
-                )
+            if technical_mode:
+                with st.expander("🔍 Diagnóstico de la corrida", expanded=False):
+                    st.json(
+                        evaluation_diagnostics
+                        or {"status": "No disponible: la evaluación no produjo datos de diagnóstico."}
+                    )
 
             # C. Resumen visual D1-D5
             st.subheader("📊 Resumen por Dimensiones Oficiales")
