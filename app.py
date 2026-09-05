@@ -358,12 +358,15 @@ with tab_batch:
                     st.write(feedback["resumen_general"])
 
                     st.markdown("### Fortalezas")
-                    if feedback["fortalezas"]:
-                        dimensions_by_name = {dim.dimension: dim for dim in res.dimensions}
-                        for strength in feedback["fortalezas"][:3]:
-                            source = dimensions_by_name.get(strength["dimension"])
-                            evidence = source.evidence[0] if source and source.evidence else "Sin evidencia citada"
-                            st.markdown(f"- **{strength['dimension']}** ({strength['level_percent']}%): {strength['text']} — Evidencia: `{evidence}`")
+                    strengths = sorted(
+                        [dim for dim in res.dimensions if dim.level_percent in (100, 75)],
+                        key=lambda dim: (dim.level_percent, dim.weight),
+                        reverse=True,
+                    )[:3]
+                    if strengths:
+                        for strength in strengths:
+                            evidence = strength.evidence[0] if strength.evidence else "Sin evidencia citada"
+                            st.markdown(f"- **{strength.dimension}** ({strength.level_percent}%): {clean_text(strength.justification)} — Evidencia: `{evidence}`")
                     else:
                         st.caption("No se identificaron fortalezas suficientemente demostradas.")
 
