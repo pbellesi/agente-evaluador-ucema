@@ -3,6 +3,7 @@ import inspect
 import subprocess
 import sys
 import time
+from html import escape
 from datetime import datetime
 import streamlit as st
 from src import evidence_extractor
@@ -21,29 +22,31 @@ st.markdown(
     """
     <style>
         :root {
-            --ae-ink: #172b4d;
-            --ae-muted: #5f6b7a;
-            --ae-border: #dfe5ec;
+            --ae-ink: #173042;
+            --ae-muted: #637382;
+            --ae-border: #d9e2e8;
             --ae-surface: #ffffff;
-            --ae-soft: #f4f7fa;
-            --ae-accent: #1f5f8b;
-            --ae-success: #1f7a5a;
-            --ae-warning: #9a6516;
+            --ae-soft: #f3f6f8;
+            --ae-accent: #7e2d3f;
+            --ae-petrol: #123c50;
+            --ae-success: #2f765a;
+            --ae-warning: #9a6a21;
+            --ae-risk: #a94f57;
         }
 
         [data-testid="stAppViewContainer"] {
-            background: #f7f8fa;
+            background: #f4f6f8;
             color: var(--ae-ink);
         }
 
         .block-container {
-            max-width: 1240px;
-            padding-top: 1.5rem;
-            padding-bottom: 3rem;
+            max-width: 1280px;
+            padding-top: 1.8rem;
+            padding-bottom: 3.4rem;
         }
 
         [data-testid="stSidebar"] {
-            background: #14263f;
+            background: #123044;
         }
 
         [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
@@ -54,9 +57,11 @@ st.markdown(
 
         .ae-hero {
             align-items: center;
-            background: var(--ae-surface);
-            border: 1px solid var(--ae-border);
-            border-radius: 18px;
+            background: var(--ae-petrol);
+            border: 1px solid #0c2b3c;
+            border-left: 6px solid var(--ae-accent);
+            border-radius: 20px;
+            box-shadow: 0 10px 24px rgba(18, 60, 80, 0.16);
             display: flex;
             gap: 1.5rem;
             justify-content: space-between;
@@ -64,7 +69,14 @@ st.markdown(
             padding: 1.45rem 1.6rem;
         }
 
-        .ae-eyebrow,
+        .ae-eyebrow {
+            color: #b8d5df;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
         .ae-section-label {
             color: var(--ae-accent);
             font-size: 0.72rem;
@@ -74,15 +86,15 @@ st.markdown(
         }
 
         .ae-hero h1 {
-            color: var(--ae-ink);
-            font-size: 2rem;
+            color: #ffffff;
+            font-size: 2.25rem;
             letter-spacing: -0.03em;
             line-height: 1.15;
             margin: 0.25rem 0;
         }
 
         .ae-hero p {
-            color: var(--ae-muted);
+            color: #d6e6ea;
             margin: 0;
         }
 
@@ -95,10 +107,10 @@ st.markdown(
         }
 
         .ae-badge {
-            background: #eef5f8;
-            border: 1px solid #cfe0e8;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.24);
             border-radius: 999px;
-            color: #1d536f;
+            color: #ffffff;
             font-size: 0.77rem;
             font-weight: 650;
             padding: 0.35rem 0.65rem;
@@ -108,9 +120,9 @@ st.markdown(
         [data-testid="stMetric"] {
             background: var(--ae-surface);
             border: 1px solid var(--ae-border);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(23, 43, 77, 0.04);
-            padding: 0.75rem 0.9rem;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(23, 48, 66, 0.05);
+            padding: 0.9rem 1rem;
         }
 
         [data-testid="stMetricLabel"] {
@@ -133,21 +145,152 @@ st.markdown(
             color: var(--ae-accent);
         }
 
+        [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+            background-color: var(--ae-accent);
+        }
+
         [data-testid="stExpander"] {
             background: var(--ae-surface);
             border: 1px solid var(--ae-border);
-            border-radius: 10px;
-            margin-bottom: 0.55rem;
+            border-radius: 14px;
+            box-shadow: 0 3px 10px rgba(23, 48, 66, 0.04);
+            margin-bottom: 0.75rem;
         }
 
         [data-testid="stAlert"] {
             border-radius: 10px;
         }
 
+        [data-testid="stDataFrame"] {
+            background: var(--ae-surface);
+            border: 1px solid var(--ae-border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
         button[kind="primary"] {
-            background: #1f5f8b;
-            border-color: #1f5f8b;
+            background: var(--ae-petrol);
+            border-color: var(--ae-petrol);
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(18, 60, 80, 0.18);
             font-weight: 650;
+            min-height: 2.8rem;
+        }
+
+        button[kind="primary"]:hover {
+            background: #0d3041;
+            border-color: #0d3041;
+        }
+
+        [data-testid="stTextInput"] input,
+        [data-testid="stTextArea"] textarea {
+            background: #ffffff;
+            border-radius: 10px;
+            border-color: #cad7df;
+        }
+
+        .ae-score-card {
+            border: 1px solid;
+            border-radius: 16px;
+            min-height: 132px;
+            padding: 1rem 1.05rem;
+        }
+
+        .ae-score-card.featured {
+            min-height: 138px;
+            padding: 1.05rem 1.15rem;
+        }
+
+        .ae-score-card.high {
+            background: #edf7f1;
+            border-color: #b9ddc8;
+        }
+
+        .ae-score-card.medium {
+            background: #fff7e7;
+            border-color: #ead29d;
+        }
+
+        .ae-score-card.low {
+            background: #fff0f1;
+            border-color: #e8bdc1;
+        }
+
+        .ae-score-card .ae-score-label {
+            color: var(--ae-muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .ae-score-card .ae-score-name {
+            color: var(--ae-ink);
+            font-size: 0.82rem;
+            margin-top: 0.2rem;
+            min-height: 2.2rem;
+        }
+
+        .ae-score-card .ae-score-value {
+            color: var(--ae-ink);
+            font-size: 2rem;
+            font-weight: 750;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-top: 0.7rem;
+        }
+
+        .ae-score-card.featured .ae-score-value {
+            font-size: 2.45rem;
+        }
+
+        .ae-score-card .ae-score-detail {
+            color: var(--ae-muted);
+            font-size: 0.78rem;
+            margin-top: 0.45rem;
+        }
+
+        .ae-feedback-card {
+            border: 1px solid;
+            border-radius: 14px;
+            margin: 0.8rem 0;
+            padding: 1rem 1.1rem 0.85rem;
+        }
+
+        .ae-feedback-card h3 {
+            font-size: 1rem;
+            margin: 0 0 0.55rem;
+        }
+
+        .ae-feedback-card p,
+        .ae-feedback-card ul {
+            margin-bottom: 0.25rem;
+        }
+
+        .ae-feedback-card.strength {
+            background: #eff8f3;
+            border-color: #c3e2cf;
+        }
+
+        .ae-feedback-card.improvement {
+            background: #fff8e9;
+            border-color: #ead7a8;
+        }
+
+        .ae-feedback-card.priority {
+            background: #f7eef1;
+            border-color: #d8b7c0;
+            border-left: 5px solid var(--ae-accent);
+        }
+
+        .ae-feedback-card.summary {
+            background: #f1f6f8;
+            border-color: #d3e2e7;
+        }
+
+        .ae-feedback-card.integrity {
+            background: #fff4ed;
+            border-color: #e8c9b3;
         }
 
         .ae-footer {
@@ -174,18 +317,67 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+def _visual_tone(level_percent):
+    """Selecciona solamente el tratamiento visual de una tarjeta."""
+    level = level_percent or 0
+    if level >= 75:
+        return "high"
+    if level >= 50:
+        return "medium"
+    return "low"
+
+
+def _render_score_card(label, name, value, detail, level_percent, featured=False):
+    """Renderiza valores ya calculados sin alterar la evaluación."""
+    featured_class = " featured" if featured else ""
+    st.markdown(
+        f"""
+        <section class="ae-score-card {_visual_tone(level_percent)}{featured_class}">
+            <div class="ae-score-label">{escape(str(label))}</div>
+            <div class="ae-score-name">{escape(str(name))}</div>
+            <div class="ae-score-value">{escape(str(value))}</div>
+            <div class="ae-score-detail">{escape(str(detail))}</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_feedback_card(title, tone, body_html):
+    """Agrupa la devolución existente en un bloque visual docente."""
+    st.markdown(
+        f"""
+        <section class="ae-feedback-card {tone}">
+            <h3>{escape(title)}</h3>
+            {body_html}
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _feedback_list(items):
+    return "<ul>" + "".join(f"<li>{item}</li>" for item in items) + "</ul>"
+
+
+def _display_text(text):
+    """Normaliza sólo la tipografía de textos ya producidos por el feedback."""
+    return escape(clean_text(str(text or "")).replace("**", "")).replace("\n", "<br>")
+
+
 st.markdown(
     """
     <section class="ae-hero">
         <div>
             <div class="ae-eyebrow">UCEMA · Programación de y con Agentes de IA</div>
             <h1>Agente Evaluador</h1>
-            <p>Evaluación objetiva y reproducible de repositorios de trabajos finales.</p>
+            <p>Evaluación trazable y reproducible de trabajos finales.</p>
         </div>
         <div class="ae-statuses" aria-label="Estado del sistema">
             <span class="ae-badge">Motor determinístico</span>
             <span class="ae-badge">0 tokens generativos</span>
-            <span class="ae-badge">USD 0 API generativa</span>
+            <span class="ae-badge">USD 0 API</span>
         </div>
     </section>
     """,
@@ -205,6 +397,7 @@ with st.sidebar:
     st.caption("Individual: un repositorio. Lote: hasta 50 repositorios en una misma corrida.")
 
     st.markdown("### Modo técnico")
+    st.caption("Opcional. No modifica la evaluación.")
 
     technical_mode = st.toggle(
         "Modo técnico",
@@ -318,9 +511,23 @@ with tab_single:
                 st.markdown(f"**Estado:** :{status_color}[{result.evaluation_status.upper()}]")
             with col3:
                 if result.final_score is not None:
-                    st.metric("Nota Final", f"{result.final_score} / 100")
+                    _render_score_card(
+                        "Nota final",
+                        "Resultado global",
+                        f"{result.final_score:.2f}",
+                        "sobre 100 puntos",
+                        result.final_score,
+                        featured=True,
+                    )
                 else:
-                    st.metric("Nota Final", "N/A")
+                    _render_score_card(
+                        "Nota final",
+                        "Resultado global",
+                        "N/A",
+                        "sin puntaje disponible",
+                        0,
+                        featured=True,
+                    )
 
             if technical_mode:
                 with st.expander("🔍 Diagnóstico de la corrida", expanded=False):
@@ -336,10 +543,12 @@ with tab_single:
                 d_cols = st.columns(len(result.dimensions))
                 for idx, dim in enumerate(result.dimensions):
                     with d_cols[idx]:
-                        st.metric(
-                            label=f"D{idx+1}: {dim.dimension}",
-                            value=f"{dim.score:.2f} pts" if dim.score is not None else "0.00",
-                            delta=f"Nivel {dim.level_percent}%" if dim.level_percent is not None else "0%"
+                        _render_score_card(
+                            f"D{idx + 1}",
+                            dim.dimension,
+                            f"{dim.level_percent or 0}%",
+                            f"{dim.score:.2f} puntos" if dim.score is not None else "0.00 puntos",
+                            dim.level_percent,
                         )
 
             # D & E. Devolución al alumno evaluado y Contradicciones
@@ -348,30 +557,57 @@ with tab_single:
             st.divider()
             st.subheader("🎓 Devolución para el trabajo evaluado")
 
-            st.markdown(f"**Resumen general:**\n{feedback['resumen_general']}")
+            _render_feedback_card(
+                "Devolución al alumno",
+                "summary",
+                f"<p>{_display_text(feedback['resumen_general'])}</p>",
+            )
 
             if feedback["fortalezas"]:
-                st.markdown("#### 🌱 Fortalezas")
-                for f in feedback["fortalezas"]:
-                    st.markdown(f"- **{f['dimension']}** ({f['level_percent']}%): {f['text']}")
+                strength_items = [
+                    (
+                        f"<strong>{escape(f['dimension'])}</strong> "
+                        f"({f['level_percent']}%): {_display_text(f['text'])}"
+                    )
+                    for f in feedback["fortalezas"]
+                ]
+                _render_feedback_card("✅ Fortalezas", "strength", _feedback_list(strength_items))
 
             if feedback["avances_parciales"]:
-                st.markdown("#### 📈 Avances parciales")
-                for a in feedback["avances_parciales"]:
-                    st.markdown(f"- **{a['dimension']}** ({a['level_percent']}%): {a['text']}")
+                partial_items = [
+                    (
+                        f"<strong>{escape(a['dimension'])}</strong> "
+                        f"({a['level_percent']}%): {_display_text(a['text'])}"
+                    )
+                    for a in feedback["avances_parciales"]
+                ]
+                _render_feedback_card("📈 Avances parciales", "summary", _feedback_list(partial_items))
 
             if feedback["aspectos_a_mejorar"]:
-                st.markdown("#### 🎯 Aspectos a mejorar")
-                for m in feedback["aspectos_a_mejorar"]:
-                    st.markdown(f"- **{m['dimension']}** (Nivel actual: {m['level_percent']}%): {m['text']}")
+                improvement_items = [
+                    (
+                        f"<strong>{escape(m['dimension'])}</strong> "
+                        f"(nivel actual: {m['level_percent']}%): {_display_text(m['text'])}"
+                    )
+                    for m in feedback["aspectos_a_mejorar"]
+                ]
+                _render_feedback_card("⚠ Aspectos a mejorar", "improvement", _feedback_list(improvement_items))
 
             if feedback["recomendacion_prioritaria"]:
-                st.info(f"💡 **Recomendación prioritaria:**\n\n{feedback['recomendacion_prioritaria']}")
+                _render_feedback_card(
+                    "🎯 Prioridad principal",
+                    "priority",
+                    f"<p>{_display_text(feedback['recomendacion_prioritaria'])}</p>",
+                )
 
             if feedback["tiene_contradicciones"]:
-                st.warning("⚠️ **Evidencia que requiere revisión**\n\nSe identificaron las siguientes inconsistencias objetivas entre los artefactos documentados y la implementación ejecutable:")
-                for note in feedback["contradicciones"]:
-                    st.markdown(f"- {note}")
+                integrity_items = [_display_text(note) for note in feedback["contradicciones"]]
+                _render_feedback_card(
+                    "🔎 Evidencia que requiere revisión",
+                    "integrity",
+                    "<p>Se identificaron inconsistencias objetivas entre los artefactos documentados y la implementación ejecutable.</p>"
+                    + _feedback_list(integrity_items),
+                )
 
             st.divider()
 
@@ -537,23 +773,30 @@ with tab_batch:
                         continue
 
                     feedback = generate_student_feedback(res)
-                    st.markdown("### Devolución al alumno")
-                    st.write(feedback["resumen_general"])
+                    _render_feedback_card(
+                        "Devolución al alumno",
+                        "summary",
+                        f"<p>{_display_text(feedback['resumen_general'])}</p>",
+                    )
 
-                    st.markdown("### Fortalezas")
                     strengths = sorted(
                         [dim for dim in res.dimensions if dim.level_percent == 100],
                         key=lambda dim: (dim.level_percent, dim.weight),
                         reverse=True,
                     )[:3]
                     if strengths:
+                        strength_items = []
                         for strength in strengths:
                             evidence = strength.evidence[0] if strength.evidence else "Sin evidencia citada"
-                            st.markdown(f"- **{strength.dimension}** ({strength.level_percent}%): {clean_text(strength.justification)} — Evidencia: `{evidence}`")
+                            strength_items.append(
+                                f"<strong>{escape(strength.dimension)}</strong> "
+                                f"({strength.level_percent}%): {_display_text(strength.justification)} "
+                                f"<span>— Evidencia: {escape(evidence)}</span>"
+                            )
+                        _render_feedback_card("✅ Fortalezas", "strength", _feedback_list(strength_items))
                     else:
                         st.caption("No se identificaron fortalezas suficientemente demostradas.")
 
-                    st.markdown("### Aspectos a mejorar")
                     improvement_dimensions = sorted(
                         [
                             (index, dim)
@@ -563,21 +806,32 @@ with tab_batch:
                         key=lambda item: ((item[1].level_percent or 0), item[0]),
                     )[:3]
                     if improvement_dimensions:
-                        for _, aspect in improvement_dimensions:
-                            st.markdown(
-                                f"- **{aspect.dimension}** ({aspect.level_percent}%): "
-                                f"{clean_text(format_aspect_description(aspect))}"
+                        improvement_items = [
+                            (
+                                f"<strong>{escape(aspect.dimension)}</strong> "
+                                f"({aspect.level_percent}%): "
+                                f"{_display_text(format_aspect_description(aspect))}"
                             )
+                            for _, aspect in improvement_dimensions
+                        ]
+                        _render_feedback_card(
+                            "⚠ Aspectos a mejorar",
+                            "improvement",
+                            _feedback_list(improvement_items),
+                        )
                     else:
                         st.caption("No se identificaron aspectos pendientes.")
 
-                    st.markdown("### Prioridad principal")
                     weakest_index, weakest_dim = min(
                         enumerate(res.dimensions),
                         key=lambda item: ((item[1].level_percent or 0), item[0]),
                     )
                     priority = clean_text(format_aspect_description(weakest_dim)) or feedback["recomendacion_prioritaria"]
-                    st.info(f"**{weakest_dim.dimension}:** {priority}")
+                    _render_feedback_card(
+                        "🎯 Prioridad principal",
+                        "priority",
+                        f"<p><strong>{escape(weakest_dim.dimension)}:</strong> {_display_text(priority)}</p>",
+                    )
 
 st.markdown(
     """
