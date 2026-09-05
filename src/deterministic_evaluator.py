@@ -107,21 +107,27 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         ev2 = [c for c in ev["contradictions"] if "DECISIONES.md" in c]
         just2 = "DECISIONES.md está presente, pero contiene contradicciones severas entre las decisiones declaradas y la implementación real del código (aplica Regla de Invalidez de Evidencia)."
         missing2 = "Alinear las decisiones documentadas con el código ejecutable real sin declarar migraciones o capacidades no verificables."
-    elif ev["decision_count"] < 3:
+    elif ev["decision_count"] < 1:
         lvl2 = 25
-        ev2 = [f"DECISIONES.md presente ({ev['decision_count']} decisión/es válida/s identificada/s)"]
-        just2 = "Existe el archivo DECISIONES.md, pero contiene menos de las 3 decisiones significativas exigidas por la rúbrica."
-        missing2 = "Documentar al menos 3 decisiones significativas especificando problema/contexto, cambio y motivo/impacto."
-    elif ev["decision_count"] >= 3 and not ev["mandatory_structure"]["is_complete"]:
-        lvl2 = 50
-        ev2 = [f"DECISIONES.md con {ev['decision_count']} decisiones estructuradas"]
-        just2 = "Se documentan 3 o más decisiones con contexto e impacto, pero la estructura del proyecto está incompleta para vincularlas con iteraciones de artefactos."
-        missing2 = "Vincular cada decisión con los artefactos concretos (código, corridas o prompts) afectados."
-    elif ev["decision_count"] >= 3 and ev["mandatory_structure"]["is_complete"]:
+        ev2 = ["DECISIONES.md presente, sin decisiones sustantivas reconstruibles"]
+        just2 = "Existe un registro, pero no permite reconstruir una decisión con contexto, cambio y motivo o impacto."
+        missing2 = "Documentar una decisión sustantiva con contexto/problema, cambio y motivo/impacto."
+    elif (ev["decision_count"] >= 2 and ev["has_process_iteration"] and ev["has_process_change"]
+          and ev["has_decision_artifact_links"] and ev["mandatory_structure"]["is_complete"]):
+        lvl2 = 100
+        ev2 = [f"Historia con {ev['decision_count']} decisiones sustantivas, iteraciones, cambios y artefactos vinculados"]
+        just2 = "Las decisiones, correcciones y cambios documentados forman una historia coherente y trazable con los artefactos disponibles."
+        missing2 = "Mantener la trazabilidad de decisiones y artefactos en nuevas iteraciones."
+    elif ev["decision_count"] >= 2:
         lvl2 = 75
-        ev2 = [f"DECISIONES.md con {ev['decision_count']} decisiones estructuradas y vinculadas a artefactos"]
-        just2 = "El archivo DECISIONES.md presenta al menos 3 decisiones con contexto, solución e impacto, vinculadas con los artefactos del repositorio."
-        missing2 = "Demostrar trazabilidad completa entre decisiones, iteraciones e historial sin ambigüedades."
+        ev2 = [f"DECISIONES.md con {ev['decision_count']} decisiones sustantivas"]
+        just2 = "Hay múltiples decisiones o iteraciones sustantivas, pero la trazabilidad completa del proceso permanece incompleta."
+        missing2 = "Vincular de forma completa decisiones, iteraciones, fallas y artefactos pertinentes."
+    elif ev["decision_count"] >= 1:
+        lvl2 = 50
+        ev2 = ["Una decisión sustantiva reconstruible en DECISIONES.md"]
+        just2 = "Existe una decisión con contexto, cambio y motivo o impacto, pero no una historia completa del proceso."
+        missing2 = "Documentar iteraciones, correcciones o decisiones adicionales y su vínculo con artefactos relevantes."
     else:
         lvl2 = 25
         just2 = "Existe documentación de decisiones pero carece de la sustancia o estructura requerida por los gates obligatorios."
@@ -149,30 +155,29 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         lvl3 = 0
         just3 = "Faltan carpetas obligatorias (prompts/ o corridas/) en el repositorio."
         missing3 = "Incorporar las carpetas obligatorias prompts/ y corridas/ con sus contenidos correspondientes."
-    elif ev["corrida_count"] < 1:
+    elif ev["identified_run_count"] < 1:
         lvl3 = 25
         ev3 = ["Estructura obligatoria presente, 0 corridas encontradas"]
         just3 = "La estructura obligatoria está presente, pero no se encontraron corridas en corridas/."
         missing3 = "Guardar al menos una corrida real en corridas/."
-    elif ev["corrida_count"] < 3 and ev["has_complete_triad"]:
+    elif ev["complete_trace_count"] >= 1 and ev["identified_run_count"] < 3:
         lvl3 = 50
         ev3 = [f"Estructura presente con {ev['corrida_count']} corrida(s) que conserva(n) entrada, salida y fecha"]
         just3 = "Existe al menos una corrida real con la triada completa (entrada, salida, fecha), pero no se alcanza el mínimo oficial de 3 corridas."
         missing3 = "Incorporar al menos tres corridas reales completas que conserven entrada, salida y fecha."
-    elif ev["corrida_count"] >= 3 and not ev["has_complete_triad"]:
-        lvl3 = 50
-        ev3 = [f"{ev['corrida_count']} corridas encontradas en corridas/, pero falta algún elemento de la triada (entrada, salida o fecha)"]
-        just3 = "Existen 3 o más corridas, pero alguna de ellas carece de la preservación completa de entrada, salida o fecha."
-        missing3 = "Asegurar que cada una de las 3 corridas conserve de forma explícita entrada, salida y fecha."
+    elif ev["identified_run_count"] >= 3 and ev["complete_trace_count"] < 3:
+        lvl3 = 75
+        ev3 = [f"{ev['identified_run_count']} corridas identificables, de las cuales {ev['complete_trace_count']} conservan la triada completa"]
+        just3 = "Hay tres o más corridas identificables, pero al menos una no vincula inequívocamente entrada, salida y fecha."
+        missing3 = "Conservar la triada completa y vinculada para cada corrida identificable."
     elif (ev["mandatory_structure"]["is_complete"] and 
-          ev["corrida_count"] >= 3 and 
-          ev["has_complete_triad"] and 
+          ev["complete_trace_count"] >= 3 and
           not any("salida" in c or "corridas" in c for c in ev["contradictions"])):
         lvl3 = 100
         ev3 = [f"Estructura completa y {ev['corrida_count']} corridas reales que conservan entrada, salida y fecha de forma transparente"]
         just3 = "La estructura obligatoria está completa y existen al menos 3 corridas reales identificables con preservación completa de entrada, salida y fecha."
         missing3 = "Mantener la actualización de corridas al incorporar nuevas iteraciones."
-    elif ev["corrida_count"] >= 3 and ev["has_complete_triad"]:
+    elif ev["identified_run_count"] >= 3 and ev["complete_trace_count"] >= 3:
         lvl3 = 75
         ev3 = [f"{ev['corrida_count']} corridas físicamente presentes, pero con salidas invalidadas por contradicción con el código ejecutable"]
         just3 = "La estructura obligatoria está presente y existen al menos 3 corridas, pero las salidas declaradas son contradichas por el código real, impidiendo la reproducibilidad plena a 100% (aplica Regla de Invalidez de Evidencia)."
@@ -229,8 +234,14 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         ev4 = ["Costo por corrida y proyecciones semanal y anual calculadas"]
         just4 = "El costo por corrida y las proyecciones semanal y anual están explícitos, pero no se fundamenta la selección del modelo bajo el criterio 'el más chico que hace bien la tarea'."
         missing4 = "Justificar por qué el modelo elegido es el más chico adecuado para la tarea."
+    elif (econ["has_tokens_num"] and econ["has_cost_num"] and econ["has_projections"]
+          and econ["has_model_choice"] and ev["has_verified_economic_metadata"]):
+        lvl4 = 100
+        ev4 = ["Metadata verificable de corrida con consumo, modelo y costo; cálculos y proyecciones documentados"]
+        just4 = "Los consumos de corrida, modelo, costo reproducible, proyecciones y justificación económica están trazados a metadata verificable."
+        missing4 = "Mantener la evidencia de corrida y actualizar los supuestos al cambiar el modelo o volumen."
     elif econ["has_tokens_num"] and econ["has_cost_num"] and econ["has_projections"] and econ["has_model_choice"]:
-        lvl4 = 75  # Se asigna 75% si los tokens son declarativos sin logs de API en corrida
+        lvl4 = 75
         ev4 = ["Costo por corrida, proyecciones semanal/anual y elección de modelo presentadas"]
         just4 = "Las cifras de consumo, costo por corrida, proyecciones y elección del modelo están calculadas de forma completa."
         missing4 = "Acompañar los datos declarados con logs o metadata original exportada del proveedor."
@@ -257,8 +268,10 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
     ev5 = []
     missing5 = None
     g = ev["gov_axes"]
+    operational_g = ev["gov_operational_axes"]
 
     active_axes_count = sum(1 for v in g.values() if v)
+    operational_axes_count = sum(1 for v in operational_g.values() if v)
 
     if active_axes_count == 0:
         lvl5 = 0
@@ -268,21 +281,26 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         else:
             just5 = "No se encontró documentación de gobierno y riesgo ni mención de controles de seguridad."
             missing5 = "Crear el archivo docs/gobierno_riesgo.md detallando sistemas, permisos, fallas y supervisión."
-    elif active_axes_count == 1:
-        lvl5 = 25
-        ev5 = [f"Eje de gobierno identificado: {[k for k,v in g.items() if v][0]}"]
-        just5 = "Existe una mención cualitativa o genérica de gobierno, pero no se detallan permisos ni modos de falla concretos."
-        missing5 = "Detallar sistemas y permisos concretos y fallas específicas con sus consecuencias."
-    elif 2 <= active_axes_count < 4:
-        lvl5 = 50
-        ev5 = [f"Ejes identificados: {[k for k,v in g.items() if v]}"]
-        just5 = "Se identifican sistemas/permisos o fallas concretas, pero faltan la respuesta prevista o el punto de supervisión humana."
-        missing5 = "Definir la respuesta/acción prevista ante una falla y especificar qué revisa una persona y en qué momento."
-    elif active_axes_count >= 5 and g["responsible"] and not any("gobierno" in c for c in ev["contradictions"]):
+    elif operational_axes_count >= 5 and not any("gobierno" in c for c in ev["contradictions"]):
         lvl5 = 100
         ev5 = ["Todos los 5 ejes de gobierno identificados (permisos, fallas, respuesta, supervisión y firma/responsable) sin contradicciones"]
         just5 = "Los ejes de gobierno y riesgo (permisos, fallas, respuesta, supervisión y responsable explícito) están documentados y alineados con el sistema."
         missing5 = "Mantener la actualización de la matriz de gobierno ante cambios en la arquitectura."
+    elif active_axes_count >= 5:
+        lvl5 = 75
+        ev5 = ["Los cinco ejes están presentes, pero falta precisión operativa en al menos uno"]
+        just5 = "La cobertura de gobierno es amplia, pero alguna respuesta, supervisión o responsabilidad no define un mecanismo aplicable."
+        missing5 = "Precisar los mecanismos operativos de permisos, respuesta, revisión y responsabilidad."
+    elif operational_axes_count == 0:
+        lvl5 = 25
+        ev5 = ["Menciones genéricas de gobierno sin controles operativos verificables"]
+        just5 = "Existe una mención cualitativa o genérica de gobierno, pero no se detallan permisos ni modos de falla concretos."
+        missing5 = "Detallar sistemas y permisos concretos y fallas específicas con sus consecuencias."
+    elif operational_axes_count < 4:
+        lvl5 = 50
+        ev5 = [f"Ejes identificados: {[k for k,v in g.items() if v]}"]
+        just5 = "Se identifican sistemas/permisos o fallas concretas, pero faltan la respuesta prevista o el punto de supervisión humana."
+        missing5 = "Definir la respuesta/acción prevista ante una falla y especificar qué revisa una persona y en qué momento."
     elif active_axes_count >= 4 and not g["responsible"]:
         lvl5 = 75
         ev5 = [f"4 ejes de gobierno identificados (permisos, fallas, respuesta y supervisión humana)"]
