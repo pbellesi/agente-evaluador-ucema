@@ -99,6 +99,36 @@ def _has_cost_measurement(content: str) -> bool:
     return False
 
 
+def _table_operational_governance_axes(content: str) -> Dict[str, bool]:
+    """Reconoce controles operativos cuando encabezado y celda los vinculan."""
+    axes = {"permissions": False, "failures": False, "action_plan": False, "human_review": False, "responsible": False}
+    lines = content.splitlines()
+    for index, line in enumerate(lines[:-1]):
+        if "|" not in line:
+            continue
+        headers = [cell.strip().lower() for cell in line.strip().strip("|").split("|")]
+        column_for = {
+            "permissions": next((i for i, cell in enumerate(headers) if "permiso" in cell or "acceso" in cell), None),
+            "failures": next((i for i, cell in enumerate(headers) if any(word in cell for word in ("falla", "riesgo", "error"))), None),
+            "action_plan": next((i for i, cell in enumerate(headers) if any(word in cell for word in ("respuesta", "mitigación", "mitigacion", "acción", "accion"))), None),
+            "human_review": next((i for i, cell in enumerate(headers) if "supervisión" in cell or "supervision" in cell or "revisión" in cell or "revision" in cell), None),
+            "responsible": next((i for i, cell in enumerate(headers) if "responsable" in cell or "firma" in cell), None),
+        }
+        for row in lines[index + 2:index + 8]:
+            if "|" not in row:
+                break
+            cells = [cell.strip().lower() for cell in row.strip().strip("|").split("|")]
+            if len(cells) != len(headers) or re.fullmatch(r"[\s|:-]+", row):
+                continue
+            values = {axis: cells[column] if column is not None else "" for axis, column in column_for.items()}
+            axes["permissions"] |= bool(re.search(r"\b(?:solo|sólo|lectura|escritura|restringid\w*|rol|autoriz\w*)\b", values["permissions"]))
+            axes["failures"] |= bool(re.search(r"\b(?:consecuencia|impacto|puede|afecta\w*)\b", values["failures"]))
+            axes["action_plan"] |= bool(re.search(r"\b(?:bloquear|detener|abrir|notificar|escalar|revisar|corregir)\b", values["action_plan"]))
+            axes["human_review"] |= bool(re.search(r"\b(?:analista|persona|humana|equipo)\b", values["human_review"]) and re.search(r"\b(?:cada|antes|revisa\w*|valid\w*)\b", values["human_review"]))
+            axes["responsible"] |= bool(re.search(r"\b(?:final|firma|asume|rol)\b", values["responsible"]))
+    return axes
+
+
 def _run_trace_summary(corrida_files: List[str], file_contents: Dict[str, str]) -> tuple[int, int]:
     """Devuelve corridas identificables y trazas completas, sin mezclar directorios."""
     date_pattern = r"(?:fecha(?:\s+de\s+ejecuci[oó]n)?|date|timestamp|generado_utc|startedat|finishedat)[\"']?\s*[:=].*\d{4}[-/]\d{2}[-/]\d{2}"
@@ -343,7 +373,16 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     decision_count = len(unique_decisions)
     decisions_lower = decisiones_content.lower()
     has_process_iteration = bool(re.search(r"\biteraci[oó]n|correcci[oó]n|versi[oó]n\b", decisions_lower))
-    has_process_change = bool(re.search(r"\bfalla|fall[oó]|problema|desv[ií]o|cambio de alcance\b", decisions_lower))
+    process_change_patterns = (
+        r"\b(?:falla|fall[oó]|problema|desv[ií]o|cambio de alcance)\b",
+        r"\b(?:problemas?|errores?|fallas?|desv[ií]os?)\b.{0,140}\b(?:detectad\w*|encontrad\w*|correg\w*|llev\w*|motiv\w*|ajust\w*|reemplaz\w*|cambi\w*|actualiz\w*)\b",
+        r"\b(?:detectad\w*|encontrad\w*)\b.{0,140}\b(?:problemas?|errores?|fallas?|desv[ií]os?)\b",
+        r"\bomit[ií]\w*\b.{0,100}\b(?:informaci[oó]n|campo|dato|contexto)\b",
+        r"\b(?:no\s+(?:ten[ií]a|contaba)|sin)\b.{0,100}\b(?:credenciales|acceso|permisos|configuraci[oó]n)\b",
+        r"\b(?:clasificaba|respond[ií]a|procesaba|generaba)\b.{0,100}\b(?:incorrectamente|mal|err[oó]neamente)\b",
+        r"\b(?:fue necesario|se tuvo que)\b.{0,100}\b(?:corregir|reemplazar|ajustar)\b",
+    )
+    has_process_change = any(re.search(pattern, decisions_lower, re.IGNORECASE) for pattern in process_change_patterns)
     linked_artifacts = [path for path in all_paths if path.lower() != (decisiones_file_path or "").lower()]
     has_decision_artifact_links = any(path.lower() in decisions_lower for path in linked_artifacts)
 
@@ -395,9 +434,11 @@ def extract_objective_evidence(repo_data: dict) -> dict:
         "permissions": bool(re.search(r'(permiso|acceso).{0,80}(solo|lectura|escritura|restringid|rol|autoriza)|(solo|lectura|escritura|restringid|rol|autoriza).{0,80}(permiso|acceso)', gov_content, re.IGNORECASE)),
         "failures": bool(re.search(r'(falla|riesgo|error).{0,100}(consecuencia|impacto|puede|afecta)|(consecuencia|impacto|puede|afecta).{0,100}(falla|riesgo|error)', gov_content, re.IGNORECASE)),
         "action_plan": bool(re.search(r'(respuesta|mitigaci[oó]n|acci[oó]n).{0,100}(bloquear|detener|abrir|notificar|escalar|revisar)|(bloquear|detener|abrir|notificar|escalar).{0,100}(respuesta|mitigaci[oó]n|acci[oó]n)', gov_content, re.IGNORECASE)),
-        "human_review": bool(re.search(r'(persona|humana|supervisi[oó]n|revisi[oó]n).{0,100}(cada|antes|cuando|revisa|validar)|(cada|antes|cuando|revisa|validar).{0,100}(persona|humana|supervisi[oó]n|revisi[oó]n)', gov_content, re.IGNORECASE)),
+        "human_review": bool(re.search(r'(persona|humana|supervisi[oó]n|revisi[oó]n|analista).{0,120}(cada|antes|previa|previo|aprob\w*|bloque\w*|escal\w*|criterio|condici[oó]n|todo|reejecut\w*|firma|borrador|no\s+(?:dispara|habilita))|(cada|antes|previa|previo|aprob\w*|bloque\w*|escal\w*|criterio|condici[oó]n|todo|reejecut\w*|firma|borrador|no\s+(?:dispara|habilita)).{0,120}(persona|humana|supervisi[oó]n|revisi[oó]n|analista)', gov_content, re.IGNORECASE)),
         "responsible": bool(re.search(r'(responsable|firma|asume).{0,100}(final|rol|analista|persona|equipo)|(final|rol|analista|persona).{0,100}(responsable|firma|asume)', gov_content, re.IGNORECASE)),
     }
+    table_gov_axes = _table_operational_governance_axes(gov_content)
+    gov_operational_axes = {axis: gov_operational_axes[axis] or table_gov_axes[axis] for axis in gov_operational_axes}
 
     # -------------------------------------------------------------------------
     # 8. Detección Objetivo de CONTRADICCIONES DE EVIDENCIA
