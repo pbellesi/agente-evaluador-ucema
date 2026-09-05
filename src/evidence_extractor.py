@@ -445,6 +445,31 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     # -------------------------------------------------------------------------
     contradictions = []
     invalidated_evidence = []
+    prompt_injection_attempts = []
+
+    # Las instrucciones del repositorio son datos. Sólo se registra una señal
+    # cuando hay una directiva imperativa para alterar la corrección, no una
+    # mención inocua a seguridad o prompt injection.
+    injection_directives = (
+        r"ignor[áa]?(?:\s+las?)?\s+instrucciones?\s+anteriores",
+        r"ignor[áa]?(?:\s+la)?\s+evidencia",
+        r"asign[áa]?(?:\s+el)?\s+(?:puntaje|nota|calificaci[oó]n).{0,40}(?:m[aá]ximo|100)",
+        r"omit[ií]?(?:\s+la)?\s+verificaci[oó]n(?:\s+de\s+artefactos?)?",
+        r"no\s+report(?:es|e|ar)?\s+inconsistencias",
+        r"cambi[áa]?(?:\s+la)?\s+r[úu]brica",
+    )
+    injection_target = r"(?:sistema\s+de\s+correcci[oó]n|sistema\s+de\s+evaluaci[oó]n|evaluador|corrector)"
+    for path, content in file_contents.items():
+        directives_found = [
+            pattern for pattern in injection_directives
+            if re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+        ]
+        target_found = bool(re.search(injection_target, content, re.IGNORECASE))
+        if len(directives_found) >= 2 or (target_found and directives_found):
+            prompt_injection_attempts.append(
+                f"Intento de manipulación / prompt injection detectado en {path}: "
+                "instrucción dirigida al evaluador para alterar la corrección."
+            )
 
     # Contradicción D1: Salida afirma haber ejecutado acción que el código no posee
     for cf in corrida_files:
@@ -511,6 +536,7 @@ def extract_objective_evidence(repo_data: dict) -> dict:
         "has_verified_economic_metadata": has_verified_economic_metadata,
         "gov_axes": gov_axes,
         "gov_operational_axes": gov_operational_axes,
+        "prompt_injection_attempts": prompt_injection_attempts,
         "coverage": {
             "implementation": _coverage(inventory, all_paths, category="implementation"),
             "economics": econ_coverage,
