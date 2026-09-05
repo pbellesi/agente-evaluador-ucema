@@ -230,4 +230,16 @@ Las acciones fueron solicitadas y validadas por el coordinador. Codex no tomó d
 **Evidencia / archivos relacionados:** Tests de regresión (20/20 OK) en `tests/test_placeholder_false_positive.py`; `src/evidence_extractor.py`; validaciones externas PULSO, Lapeque26 y tubidj10. No regresión: Excelente 82,5 → 82,5; Flojo 32,5 → 32,5; Tramposo 32,5 → 32,5; PULSO 86,25 → 86,25; Lapeque26 82,5 → 82,5; tubidj10 40,0 → 90,0. La validación final en producción registró PULSO 86,25 y tubidj10 90,0.<br>
 **Revisión futura:** Tratar estos resultados como evidencia de comportamiento y no como notas correctas absolutas. Mantener pruebas externas y benchmarks internos al modificar detectores de evidencia; el evaluador no se considera infalible.
 
+## DEC-017 — Contrato sintético de aceptación y congelamiento del motor
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi, coordinación y validación de integración; revisión humana de los criterios de aceptación.<br>
+**IA utilizada:** Codex para asistencia de diagnóstico, implementación acotada y ejecución de pruebas bajo instrucciones humanas.<br>
+**Contexto:** Las reglas de extracción inicialmente dependían en exceso de formatos y palabras clave. Las revisiones de repositorios reales permitieron detectar posibles falsos negativos y falsos positivos, pero no debían convertirse en ajustes dirigidos a subir o conservar la nota de un repositorio particular.<br>
+**Decisión:** Congelar primero un contrato de aceptación derivado de la rúbrica. Cada posible bug observado sigue el método: repositorios reales detectan una clase de error → la clase se expresa primero como caso sintético con expectativa fijada → se ajusta el motor sólo contra ese contrato → los repositorios reales se usan después para comprobar generalización y regresión.<br>
+**Motivo:** Separar la interpretación de la rúbrica de los puntajes concretos de terceros, preservar el principio EVIDENCIA > DECLARACIÓN y evitar sobreajustar detectores para obtener notas deseadas.<br>
+**Resultado:** 31/31 acceptance tests y 69/69 pruebas de la suite completa. Los casos oficiales quedaron coherentes: Excelente 88,75; Flojo 28,75; Tramposo 21,25. La regresión externa final fue estable en PULSO (85,0), SACME (96,25), Lapeque26 (92,5), tubidj10 (85,0), SilA066 (85,0), FSio (92,5) y El-Diegote (92,5).<br>
+**Consecuencia:** El motor queda congelado salvo evidencia de un bug objetivo nuevo, que deberá seguir el mismo recorrido sintético antes de modificar implementación, scoring, gates, rúbrica o casos.<br>
+**Evidencia / archivos relacionados:** `rubrica.md`; `tests/test_acceptance_matrix.py`; `src/evidence_extractor.py`; `src/deterministic_evaluator.py`; PR #31, merge `8b11d81`.<br>
+
 
