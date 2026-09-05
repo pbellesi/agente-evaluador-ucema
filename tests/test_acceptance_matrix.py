@@ -151,6 +151,20 @@ Problema: el formato impedía revisión. Cambio: se actualizó prompts/user_prom
 """
         self.assertEqual(level(contents, 1), 100)
 
+    def test_a1_d2_complete_history_in_alternative_documentary_format_is_100(self):
+        contents = structure()
+        contents["src/agent.ts"] = real_code()
+        for run in ("one", "two", "three"):
+            add_complete_run(contents, run)
+        contents["DECISIONES.md"] = """## Registro de diseño
+Situación inicial: prompts/system_prompt.md dejaba campos sin definir. Se adoptó un esquema JSON y se actualizó prompts/system_prompt.md. Impacto: salida verificable.
+## Bitácora de corrección
+Falla: corridas/one/metadata.json no conservaba fecha. Corrección: se registró startedAt en corridas/two/metadata.json. Resultado: trazabilidad reconstruible.
+## Revisión de alcance
+Problema: la integración previa no era observable. Cambio de alcance: src/agent.ts usa una API verificable. Motivo: evitar afirmaciones sin evidencia. Consecuencia: corridas/three/output.json puede contrastarse.
+"""
+        self.assertEqual(level(contents, 1), 100)
+
     # D3
     def test_d3_02_one_complete_run_is_50(self):
         contents = structure()
@@ -230,6 +244,66 @@ Problema: el formato impedía revisión. Cambio: se actualizó prompts/user_prom
         contents = structure()
         contents["docs/gobierno_riesgo.md"] = "El agente accede sólo en lectura a datos de tickets mediante permiso restringido. Si falla la clasificación, puede priorizar mal un ticket; respuesta: bloquear envío y abrir revisión. Una persona revisa cada prioridad antes de publicar. Responsable final y firma: Analista de guardia."
         self.assertEqual(level(contents, 4), 100)
+
+    def test_a2_d5_operational_governance_table_is_100(self):
+        contents = structure()
+        contents["docs/gobierno_riesgo.md"] = """| Sistema o datos | Permiso concreto | Falla y consecuencia | Respuesta prevista | Supervisión humana | Responsable/firma |
+| --- | --- | --- | --- | --- | --- |
+| Tickets de clientes | Acceso de sólo lectura restringido al rol analista | Falla de clasificación puede priorizar mal un ticket | Bloquear publicación y abrir revisión | Analista revisa cada prioridad antes de enviar | Responsable final: Analista de guardia firma |"""
+        self.assertEqual(level(contents, 4), 100)
+
+    def test_a3_d5_generic_risk_words_are_25(self):
+        contents = structure()
+        contents["docs/gobierno_riesgo.md"] = "El sistema contempla seguridad, privacidad, riesgos y revisión humana."
+        self.assertEqual(level(contents, 4), 25)
+
+    def test_a4_d3_dummy_contradicted_runs_are_25_and_invalidated(self):
+        contents = structure()
+        contents["src/agent.py"] = 'def run(): return {"conectado": False}'
+        for run in ("one", "two", "three"):
+            add_complete_run(contents, run, "input.json", "salida.json")
+            contents[f"corridas/{run}/salida.json"] = '{"conectado": true, "modelo":"api-real"}'
+        result = evaluate(contents)
+        self.assertTrue(any("salida" in item for item in result.integrity_notes))
+        self.assertEqual(result.dimensions[2].level_percent, 25)
+
+    def test_a5_d2_semantic_error_and_correction_without_literal_keywords_are_100(self):
+        contents = structure()
+        contents["src/agent.ts"] = real_code()
+        for run in ("one", "two", "three"):
+            add_complete_run(contents, run)
+        contents["DECISIONES.md"] = """## Decisión inicial
+Contexto: una prueba omitió información necesaria de prompts/system_prompt.md. Cambio: se definió un esquema JSON. Impacto: la salida queda verificable.
+## Iteración de corrección
+Contexto: la integración previa no tenía credenciales. Se reemplazó el comportamiento en src/agent.ts por una API observable. Motivo: evitar afirmaciones sin respaldo. Resultado: corridas/one/output.json puede contrastarse.
+## Decisión de ajuste
+Contexto: la primera implementación clasificaba incorrectamente. Corrección: se actualizó prompts/user_prompt.md. Consecuencia: corridas/two/output.json conserva una respuesta revisable.
+"""
+        self.assertEqual(level(contents, 1), 100)
+
+    def test_a6_d5_generic_human_review_is_25(self):
+        contents = structure()
+        contents["docs/gobierno_riesgo.md"] = "El sistema puede equivocarse. Una persona debería revisar el resultado cuando sea necesario."
+        self.assertEqual(level(contents, 4), 25)
+
+    def test_a7_d5_operational_review_without_timing_keywords_is_100(self):
+        contents = structure()
+        contents["docs/gobierno_riesgo.md"] = """El agente usa tickets de clientes con permiso de solo lectura restringido. Una falla de clasificación puede priorizar mal un ticket; respuesta: detener el envío y corregir el registro. Una analista revisa todo y Analista reejecuta resultados observados. Responsable final: Analista de guardia firma. Sin firma, la salida es borrador y no dispara acciones."""
+        self.assertEqual(level(contents, 4), 100)
+
+    def test_a8_d2_plural_problems_and_corrected_errors_are_100(self):
+        contents = structure()
+        contents["src/agent.ts"] = real_code()
+        for run in ("one", "two", "three"):
+            add_complete_run(contents, run)
+        contents["DECISIONES.md"] = """## Decisión inicial
+Contexto: se encontraron tres problemas reales en prompts/system_prompt.md. Cambio: se definió un esquema JSON. Impacto: la salida queda verificable.
+## Iteración de ajustes
+Los problemas detectados llevaron a actualizar src/agent.ts y corridas/one/output.json. Motivo: evitar respuestas incompletas. Resultado: trazabilidad preservada.
+## Decisión de corrección
+Contexto: errores concretos se corrigieron en prompts/user_prompt.md. Cambio: se agregó validación. Consecuencia: corridas/two/output.json conserva una respuesta revisable.
+"""
+        self.assertEqual(level(contents, 1), 100)
 
 
 if __name__ == "__main__":

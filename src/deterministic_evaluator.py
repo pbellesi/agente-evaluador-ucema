@@ -150,11 +150,20 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
     w3 = 15.0
     ev3 = []
     missing3 = None
+    invalidated_run_outputs = [
+        item for item in ev["invalidated_evidence"]
+        if "corridas/" in item.lower() and "salida" in item.lower()
+    ]
 
     if not ev["mandatory_structure"]["prompts"] or not ev["mandatory_structure"]["corridas"]:
         lvl3 = 0
         just3 = "Faltan carpetas obligatorias (prompts/ o corridas/) en el repositorio."
         missing3 = "Incorporar las carpetas obligatorias prompts/ y corridas/ con sus contenidos correspondientes."
+    elif invalidated_run_outputs:
+        lvl3 = 25
+        ev3 = invalidated_run_outputs
+        just3 = "Las salidas preservadas afirman ejecución real, pero esa afirmación fue invalidada por contradicción objetiva con la implementación observable."
+        missing3 = "Conservar corridas reales cuya salida pueda producirse y contrastarse con la implementación ejecutable."
     elif ev["identified_run_count"] < 1:
         lvl3 = 25
         ev3 = ["Estructura obligatoria presente, 0 corridas encontradas"]
