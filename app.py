@@ -359,7 +359,7 @@ with tab_batch:
 
                     st.markdown("### Fortalezas")
                     strengths = sorted(
-                        [dim for dim in res.dimensions if dim.level_percent in (100, 75)],
+                        [dim for dim in res.dimensions if dim.level_percent == 100],
                         key=lambda dim: (dim.level_percent, dim.weight),
                         reverse=True,
                     )[:3]
@@ -371,11 +371,22 @@ with tab_batch:
                         st.caption("No se identificaron fortalezas suficientemente demostradas.")
 
                     st.markdown("### Aspectos a mejorar")
-                    if feedback["aspectos_a_mejorar"]:
-                        for aspect in feedback["aspectos_a_mejorar"][:3]:
-                            st.markdown(f"- **{aspect['dimension']}** ({aspect['level_percent']}%): {aspect['text']}")
+                    improvement_dimensions = sorted(
+                        [
+                            (index, dim)
+                            for index, dim in enumerate(res.dimensions)
+                            if (dim.level_percent or 0) < 100
+                        ],
+                        key=lambda item: ((item[1].level_percent or 0), item[0]),
+                    )[:3]
+                    if improvement_dimensions:
+                        for _, aspect in improvement_dimensions:
+                            st.markdown(
+                                f"- **{aspect.dimension}** ({aspect.level_percent}%): "
+                                f"{clean_text(format_aspect_description(aspect))}"
+                            )
                     else:
-                        st.caption("No se identificaron aspectos pendientes fuera de los avances parciales.")
+                        st.caption("No se identificaron aspectos pendientes.")
 
                     st.markdown("### Prioridad principal")
                     weakest_index, weakest_dim = min(
