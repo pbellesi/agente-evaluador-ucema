@@ -37,6 +37,105 @@ def _is_code_file(path: str, content: str) -> bool:
     return extension == ".html" and bool(re.search(r"<script|type=['\"]module|onclick=|addEventListener", content, re.IGNORECASE))
 
 
+def _has_instantiated_sdk_call(content: str) -> bool:
+    """Reconoce SDKs sólo cuando cliente e invocación aparecen en el mismo código."""
+    sdk_calls = [
+        (r"\bnew\s+OpenAI\s*\(", r"\b\w+\.responses\.(?:create|stream)\s*\("),
+        (r"\bnew\s+OpenAI\s*\(", r"\b\w+\.chat\.completions\.create\s*\("),
+        (r"\b(?:anthropic\.)?Anthropic\s*\(", r"\b\w+\.messages\.(?:create|stream)\s*\("),
+        (r"\bGoogleGenerativeAI\s*\(", r"\b\w+\.getGenerativeModel\s*\("),
+    ]
+    return any(re.search(client, content, re.IGNORECASE) and re.search(call, content, re.IGNORECASE)
+               for client, call in sdk_calls)
+
+
+def _has_token_measurement(content: str) -> bool:
+    """Detecta mediciones etiquetadas y tablas, sin inferir tokens de texto libre."""
+    labeled_measurement = re.search(
+        r"(?:input|output|entrada|salida)\s*tokens?|tokens?\s*(?:de\s+)?(?:input|output|entrada|salida)\s*[:=]?\s*\**\s*\d",
+        content,
+        re.IGNORECASE,
+    )
+    legacy_measurement = re.search(r"\d+[\.,]?\d*\s*tokens", content, re.IGNORECASE)
+    economic_context = bool(re.search(r"\b(?:modelo|model|api|tarifa|pricing|costo\s+por\s+corrida|corrida)\b", content, re.IGNORECASE))
+    if (labeled_measurement or legacy_measurement) and economic_context:
+        return True
+
+    lines = content.splitlines()
+    for index, line in enumerate(lines[:-1]):
+        if "|" not in line or "token" not in line.lower():
+            continue
+        headers = [cell.strip().lower() for cell in line.strip().strip("|").split("|")]
+        has_link_column = any(any(term in cell for term in ("modelo", "model", "corrida", "run", "costo", "cost")) for cell in headers)
+        token_columns = [index for index, cell in enumerate(headers) if "token" in cell]
+        if not has_link_column:
+            continue
+        for row in lines[index + 1:index + 5]:
+            cells = [cell.strip() for cell in row.strip().strip("|").split("|")] if "|" in row else []
+            if "|" in row and len(cells) == len(headers) and any(re.search(r"\d", cells[column]) for column in token_columns) and not re.fullmatch(r"[\s|:-]+", row):
+                return True
+    return False
+
+
+def _has_cost_measurement(content: str) -> bool:
+    has_cost = bool(re.search(r"(?:costo|cost)\D{0,40}(?:usd|\$)\s*\d+|(?:usd|\$)\s*\d+\D{0,40}(?:costo|cost)", content, re.IGNORECASE))
+    has_ai_context = bool(re.search(r"\b(?:token|modelo|model|api|corrida|run|tarifa|pricing)\b", content, re.IGNORECASE))
+    if has_cost and has_ai_context:
+        return True
+    lines = content.splitlines()
+    for index, line in enumerate(lines[:-1]):
+        if "|" not in line:
+            continue
+        headers = [cell.strip().lower() for cell in line.strip().strip("|").split("|")]
+        token_columns = [i for i, cell in enumerate(headers) if "token" in cell]
+        cost_columns = [i for i, cell in enumerate(headers) if "costo" in cell or "cost" in cell]
+        has_model_or_run = any(any(term in cell for term in ("modelo", "model", "corrida", "run", "caso")) for cell in headers)
+        if not (token_columns and cost_columns and has_model_or_run):
+            continue
+        for row in lines[index + 1:index + 5]:
+            cells = [cell.strip() for cell in row.strip().strip("|").split("|")] if "|" in row else []
+            if len(cells) == len(headers) and any(re.search(r"\d", cells[i]) for i in token_columns) and any(re.search(r"\d", cells[i]) for i in cost_columns):
+                return True
+    return False
+
+
+def _run_trace_summary(corrida_files: List[str], file_contents: Dict[str, str]) -> tuple[int, int]:
+    """Devuelve corridas identificables y trazas completas, sin mezclar directorios."""
+    date_pattern = r"(?:fecha(?:\s+de\s+ejecuci[oó]n)?|date|timestamp|generado_utc|startedat|finishedat)[\"']?\s*[:=].*\d{4}[-/]\d{2}[-/]\d{2}"
+    grouped: Dict[str, List[str]] = {}
+    for path in corrida_files:
+        parts = path.split("/")
+        grouped.setdefault("/".join(parts[:2]) if len(parts) > 1 else path, []).append(path)
+
+    identifiable_groups = 0
+    complete_groups = 0
+    for paths in grouped.values():
+        lower_paths = [path.lower() for path in paths]
+        has_input = any("entrada" in path or "input" in path for path in lower_paths)
+        has_output = any(any(token in path for token in ("salida", "output", "result")) for path in lower_paths)
+        has_date = any(any(token in path for token in ("fecha", "time", "date", "metadata")) for path in lower_paths)
+        if not has_date:
+            has_date = any(re.search(date_pattern, file_contents.get(path, ""), re.IGNORECASE) for path in paths)
+        components = sum((has_input, has_output, has_date))
+        if components >= 2:
+            identifiable_groups += 1
+        if components == 3:
+            complete_groups += 1
+
+    metadata_traces = 0
+    for path in corrida_files:
+        content = file_contents.get(path, "")
+        has_date = bool(re.search(date_pattern, content, re.IGNORECASE))
+        input_match = re.search(r"(?:caso|input|entrada|solicitud)\s*:\s*`?([^`\n]+)", content, re.IGNORECASE)
+        input_reference = input_match and input_match.group(1).strip().split()[0]
+        has_input_reference = bool(input_reference and any(candidate.endswith(input_reference) for candidate in file_contents))
+        has_complete_output = "raw" in path.lower() and len(content) > 200
+        has_narrative_output = bool(re.search(r"salida\s+del\s+agente|salida\s+tras", content, re.IGNORECASE))
+        if has_date and has_input_reference and (has_complete_output or has_narrative_output):
+            metadata_traces += 1
+    return max(identifiable_groups, metadata_traces), max(complete_groups, metadata_traces)
+
+
 def extract_objective_evidence(repo_data: dict) -> dict:
     """
     Extrae evidencias objetivas y agnósticas del repositorio objetivo.
@@ -115,6 +214,8 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     found_real_execution = []
     for cf in code_files:
         content = file_contents.get(cf, "")
+        if _has_instantiated_sdk_call(content):
+            found_real_execution.append(f"{cf}: SDK instanciado con invocación efectiva")
         for pat in real_execution_patterns:
             if re.search(pat, content, re.IGNORECASE):
                 found_real_execution.append(f"{cf}: patrón de ejecución/procesamiento ('{pat}')")
@@ -158,12 +259,16 @@ def extract_objective_evidence(repo_data: dict) -> dict:
 
     corrida_count = len(corrida_dirs) if corrida_dirs else (1 if corrida_files else 0)
 
-    # Verificar presencia de triada: entrada, salida, fecha
+    # Verificar presencia de triada: entrada, salida, fecha. Además de los
+    # nombres convencionales, admitir metadata y referencias a inputs reales.
     has_entrada = any("entrada" in p.lower() or "input" in p.lower() for p in corrida_files)
     has_salida = any("salida" in p.lower() or "output" in p.lower() or "result" in p.lower() for p in corrida_files)
     has_fecha = any("fecha" in p.lower() or "time" in p.lower() or "date" in p.lower() or "metadata" in p.lower() for p in corrida_files)
-    
-    has_complete_triad = has_entrada and has_salida and has_fecha
+    identifiable_run_count, complete_trace_count = _run_trace_summary(corrida_files, file_contents)
+    # La triada no puede componerse con artefactos de corridas distintas.
+    # Para el nivel alto basta demostrar tres trazas completas, no cada log legado.
+    has_complete_triad = complete_trace_count >= 3
+    corrida_count = max(corrida_count, identifiable_run_count)
 
     # -------------------------------------------------------------------------
     # 5. Análisis de Decisiones (DECISIONES.md)
@@ -185,25 +290,62 @@ def extract_objective_evidence(repo_data: dict) -> dict:
 
             sec_lower = sec_text.lower()
             is_explicit = bool(re.search(r'#{2,3}\s*decisi[óo]n\s*\d*', sec_lower))
+            is_iteration = bool(re.search(r'#{2,3}\s*iteraci[óo]n\s*\d*', sec_lower))
 
             has_context = any(kw in sec_lower for kw in [
-                "contexto", "problema", "primera versión", "anteriormente", "necesitábamos", 
+                "contexto", "problema", "primera versión", "anteriormente", "necesitábamos", "por qué", "por que",
                 "se consideró", "prueba", "situación", "desafío", "issue", "caso", "versión inicial", "primera implementación"
             ])
             has_change = any(kw in sec_lower for kw in [
                 "decisión", "decidimos", "cambio", "se definió", "se definieron", "se redujo", 
-                "elegimos", "migramos", "adoptamos", "incorporamos", "implementamos", "solución", "integrar", "determinó", "diseño", "se adoptó", "se retiró", "se ejecutaron"
+                "elegimos", "migramos", "adoptamos", "incorporamos", "implementamos", "solución", "integrar", "determinó", "diseño", "se adoptó", "se retiró", "se ejecutaron", "corrección", "se agregó", "se agrego", "se cambió", "se cambio", "se actualizó", "se actualizo"
             ])
             has_impact = any(kw in sec_lower for kw in [
                 "impacto", "motivo", "resultado", "evidencia", "efecto", "beneficio", 
                 "permite", "produjo", "evita", "consecuencia", "ahorro", "mejora", "conservan", "garantizar", "asegurar", "calificación",
-                "limitación", "documentada", "documentado", "registrada", "registrado", "quedó", "quedaron", "mantiene", "firma", "revisa"
+                "limitación", "documentada", "documentado", "registrada", "registrado", "quedó", "quedaron", "mantiene", "firma", "revisa", "reproducibilidad", "trazabilidad", "cumplir"
             ])
 
             if is_explicit or (has_context and has_change and has_impact):
                 valid_decisions.append(sec_text)
 
-    decision_count = len(valid_decisions)
+        # Una tabla es una colección de decisiones si explicita columnas de
+        # cambio/decisión y motivo/impacto, y cada fila aporta ambos campos.
+        lines = decisiones_content.splitlines()
+        for index, header in enumerate(lines):
+            if "|" not in header:
+                continue
+            columns = [cell.strip().lower() for cell in header.strip().strip("|").split("|")]
+            change_index = next((i for i, cell in enumerate(columns) if any(word in cell for word in ("cambio", "decisión", "decision", "solución", "solucion"))), None)
+            impact_index = next((i for i, cell in enumerate(columns) if any(word in cell for word in ("motivo", "impacto", "resultado", "razón", "razon"))), None)
+            if change_index is None or impact_index is None:
+                continue
+            for row in lines[index + 2:]:
+                if "|" not in row:
+                    break
+                cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+                if len(cells) <= max(change_index, impact_index):
+                    continue
+                if len(cells[change_index]) >= 12 and len(cells[impact_index]) >= 12:
+                    valid_decisions.append(row)
+
+    # Deduplicación conservadora: sólo fusiona unidades que comparten la mayor
+    # parte de sus términos sustantivos, como tabla-resumen y desarrollo posterior.
+    stopwords = {"la", "el", "los", "las", "de", "del", "y", "en", "por", "para", "que", "se", "una", "un", "con", "al", "como", "su", "es"}
+    unique_decisions = []
+    fingerprints = []
+    for decision in valid_decisions:
+        terms = {term for term in re.findall(r"[a-záéíóúñ0-9]{4,}", decision.lower()) if term not in stopwords}
+        duplicate = any(terms and existing and len(terms & existing) / min(len(terms), len(existing)) >= 0.75 for existing in fingerprints)
+        if not duplicate:
+            unique_decisions.append(decision)
+            fingerprints.append(terms)
+    decision_count = len(unique_decisions)
+    decisions_lower = decisiones_content.lower()
+    has_process_iteration = bool(re.search(r"\biteraci[oó]n|correcci[oó]n|versi[oó]n\b", decisions_lower))
+    has_process_change = bool(re.search(r"\bfalla|fall[oó]|problema|desv[ií]o|cambio de alcance\b", decisions_lower))
+    linked_artifacts = [path for path in all_paths if path.lower() != (decisiones_file_path or "").lower()]
+    has_decision_artifact_links = any(path.lower() in decisions_lower for path in linked_artifacts)
 
     # -------------------------------------------------------------------------
     # 6. Análisis Económico (docs/analisis_economico.md o README)
@@ -218,10 +360,16 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     else:
         econ_content = ""
 
-    has_tokens_num = bool(re.search(r'\d+[\.\,]?\d*\s*tokens', econ_content, re.IGNORECASE))
-    has_cost_num = bool(re.search(r'(usd|\$)\s*\d+', econ_content, re.IGNORECASE))
+    has_tokens_num = _has_token_measurement(econ_content)
+    has_cost_num = _has_cost_measurement(econ_content)
     has_projections = bool(re.search(r'(semanal|anual|mes|mensual|proyección)', econ_content, re.IGNORECASE))
     has_model_choice = bool(re.search(r'(modelo|elección|chico|adecuado)', econ_content, re.IGNORECASE))
+    has_verified_economic_metadata = any(
+        re.search(r'"?(?:model|modelo)"?\s*[:=]', file_contents.get(path, ''), re.IGNORECASE)
+        and re.search(r'"?(?:prompt_tokens|input_tokens|tokens_?entrada|completion_tokens|output_tokens|tokens_?salida)"?\s*[:=]\s*\d', file_contents.get(path, ''), re.IGNORECASE)
+        and re.search(r'"?(?:cost_usd|costo(?:_usd)?)"?\s*[:=]\s*\d', file_contents.get(path, ''), re.IGNORECASE)
+        for path in corrida_files
+    )
 
     # -------------------------------------------------------------------------
     # 7. Análisis de Gobierno y Riesgo (docs/gobierno_riesgo.md o README)
@@ -242,6 +390,13 @@ def extract_objective_evidence(repo_data: dict) -> dict:
         "action_plan": bool(re.search(r'(respuesta|mitigación|acción|eventualidad)', gov_content, re.IGNORECASE)),
         "human_review": bool(re.search(r'(revisión|supervisión|humana|persona)', gov_content, re.IGNORECASE)),
         "responsible": bool(re.search(r'(responsable|firma|asume)', gov_content, re.IGNORECASE))
+    }
+    gov_operational_axes = {
+        "permissions": bool(re.search(r'(permiso|acceso).{0,80}(solo|lectura|escritura|restringid|rol|autoriza)|(solo|lectura|escritura|restringid|rol|autoriza).{0,80}(permiso|acceso)', gov_content, re.IGNORECASE)),
+        "failures": bool(re.search(r'(falla|riesgo|error).{0,100}(consecuencia|impacto|puede|afecta)|(consecuencia|impacto|puede|afecta).{0,100}(falla|riesgo|error)', gov_content, re.IGNORECASE)),
+        "action_plan": bool(re.search(r'(respuesta|mitigaci[oó]n|acci[oó]n).{0,100}(bloquear|detener|abrir|notificar|escalar|revisar)|(bloquear|detener|abrir|notificar|escalar).{0,100}(respuesta|mitigaci[oó]n|acci[oó]n)', gov_content, re.IGNORECASE)),
+        "human_review": bool(re.search(r'(persona|humana|supervisi[oó]n|revisi[oó]n).{0,100}(cada|antes|cuando|revisa|validar)|(cada|antes|cuando|revisa|validar).{0,100}(persona|humana|supervisi[oó]n|revisi[oó]n)', gov_content, re.IGNORECASE)),
+        "responsible": bool(re.search(r'(responsable|firma|asume).{0,100}(final|rol|analista|persona|equipo)|(final|rol|analista|persona).{0,100}(responsable|firma|asume)', gov_content, re.IGNORECASE)),
     }
 
     # -------------------------------------------------------------------------
@@ -299,15 +454,22 @@ def extract_objective_evidence(repo_data: dict) -> dict:
         "system_type": system_type,
         "has_substantive_prompts": has_substantive_prompts,
         "corrida_count": corrida_count,
+        "identified_run_count": identifiable_run_count,
+        "complete_trace_count": complete_trace_count,
         "has_complete_triad": has_complete_triad,
         "decision_count": decision_count,
+        "has_process_iteration": has_process_iteration,
+        "has_process_change": has_process_change,
+        "has_decision_artifact_links": has_decision_artifact_links,
         "econ": {
             "has_tokens_num": has_tokens_num,
             "has_cost_num": has_cost_num,
             "has_projections": has_projections,
             "has_model_choice": has_model_choice
         },
+        "has_verified_economic_metadata": has_verified_economic_metadata,
         "gov_axes": gov_axes,
+        "gov_operational_axes": gov_operational_axes,
         "coverage": {
             "implementation": _coverage(inventory, all_paths, category="implementation"),
             "economics": econ_coverage,
