@@ -352,6 +352,7 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
     integrity_notes = list(ev["contradictions"])
     if ev["invalidated_evidence"]:
         integrity_notes.append(f"Evidencia invalidada por contradicción: {', '.join(ev['invalidated_evidence'])}")
+    integrity_notes.extend(ev.get("prompt_injection_attempts", []))
 
     return EvaluationResult(
         repository=repo_data["repository"],
