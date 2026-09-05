@@ -17,8 +17,180 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🎓 Agente Evaluador — Trabajos Finales (UCEMA)")
-st.caption("Evaluación determinística Zero-API de repositorios aplicando la Rúbrica Autoritativa V2")
+st.markdown(
+    """
+    <style>
+        :root {
+            --ae-ink: #172b4d;
+            --ae-muted: #5f6b7a;
+            --ae-border: #dfe5ec;
+            --ae-surface: #ffffff;
+            --ae-soft: #f4f7fa;
+            --ae-accent: #1f5f8b;
+            --ae-success: #1f7a5a;
+            --ae-warning: #9a6516;
+        }
+
+        [data-testid="stAppViewContainer"] {
+            background: #f7f8fa;
+            color: var(--ae-ink);
+        }
+
+        .block-container {
+            max-width: 1240px;
+            padding-top: 1.5rem;
+            padding-bottom: 3rem;
+        }
+
+        [data-testid="stSidebar"] {
+            background: #14263f;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] p {
+            color: #edf3f9;
+        }
+
+        .ae-hero {
+            align-items: center;
+            background: var(--ae-surface);
+            border: 1px solid var(--ae-border);
+            border-radius: 18px;
+            display: flex;
+            gap: 1.5rem;
+            justify-content: space-between;
+            margin-bottom: 1.6rem;
+            padding: 1.45rem 1.6rem;
+        }
+
+        .ae-eyebrow,
+        .ae-section-label {
+            color: var(--ae-accent);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .ae-hero h1 {
+            color: var(--ae-ink);
+            font-size: 2rem;
+            letter-spacing: -0.03em;
+            line-height: 1.15;
+            margin: 0.25rem 0;
+        }
+
+        .ae-hero p {
+            color: var(--ae-muted);
+            margin: 0;
+        }
+
+        .ae-statuses {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            justify-content: flex-end;
+            max-width: 390px;
+        }
+
+        .ae-badge {
+            background: #eef5f8;
+            border: 1px solid #cfe0e8;
+            border-radius: 999px;
+            color: #1d536f;
+            font-size: 0.77rem;
+            font-weight: 650;
+            padding: 0.35rem 0.65rem;
+            white-space: nowrap;
+        }
+
+        [data-testid="stMetric"] {
+            background: var(--ae-surface);
+            border: 1px solid var(--ae-border);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(23, 43, 77, 0.04);
+            padding: 0.75rem 0.9rem;
+        }
+
+        [data-testid="stMetricLabel"] {
+            color: var(--ae-muted);
+            font-size: 0.78rem;
+            font-weight: 650;
+            white-space: normal;
+        }
+
+        [data-testid="stMetricValue"] {
+            color: var(--ae-ink);
+        }
+
+        [data-testid="stTabs"] button {
+            color: var(--ae-muted);
+            font-weight: 650;
+        }
+
+        [data-testid="stTabs"] button[aria-selected="true"] {
+            color: var(--ae-accent);
+        }
+
+        [data-testid="stExpander"] {
+            background: var(--ae-surface);
+            border: 1px solid var(--ae-border);
+            border-radius: 10px;
+            margin-bottom: 0.55rem;
+        }
+
+        [data-testid="stAlert"] {
+            border-radius: 10px;
+        }
+
+        button[kind="primary"] {
+            background: #1f5f8b;
+            border-color: #1f5f8b;
+            font-weight: 650;
+        }
+
+        .ae-footer {
+            border-top: 1px solid var(--ae-border);
+            color: var(--ae-muted);
+            font-size: 0.78rem;
+            margin-top: 2.5rem;
+            padding-top: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 760px) {
+            .ae-hero {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .ae-statuses {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <section class="ae-hero">
+        <div>
+            <div class="ae-eyebrow">UCEMA · Programación de y con Agentes de IA</div>
+            <h1>Agente Evaluador</h1>
+            <p>Evaluación objetiva y reproducible de repositorios de trabajos finales.</p>
+        </div>
+        <div class="ae-statuses" aria-label="Estado del sistema">
+            <span class="ae-badge">Motor determinístico</span>
+            <span class="ae-badge">0 tokens generativos</span>
+            <span class="ae-badge">USD 0 API generativa</span>
+        </div>
+    </section>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Sidebar informativa
 with st.sidebar:
@@ -26,16 +198,13 @@ with st.sidebar:
     if os.path.exists(logo_path):
         st.image(logo_path, width=160)
 
-    st.subheader("👥 Grupo — Agente Evaluador")
-    st.markdown("""
-    **Integrantes:**
-    - Pablo Bellesi
-    - Diego Mendez
-    - Franco Gambini
-    - Sofia Mapelli
-    - Franco Forziati
-    - Melisa Clark
-    """)
+    st.markdown("### Configuración")
+    st.caption("Elegí el modo de evaluación desde las pestañas principales.")
+
+    st.markdown("### Modos de evaluación")
+    st.caption("Individual: un repositorio. Lote: hasta 50 repositorios en una misma corrida.")
+
+    st.markdown("### Modo técnico")
 
     technical_mode = st.toggle(
         "Modo técnico",
@@ -85,19 +254,30 @@ with st.sidebar:
 
     st.divider()
 
-    st.header("ℹ️ Información")
+    with st.expander("👥 Equipo · Agente Evaluador", expanded=False):
+        st.markdown("""
+        - Pablo Bellesi
+        - Diego Mendez
+        - Franco Gambini
+        - Sofia Mapelli
+        - Franco Forziati
+        - Melisa Clark
+        """)
+
+    st.markdown("### Principios")
     st.markdown("""
-    **Principios del Evaluador V2:**
-    - **Scoring 100% Determinístico en Python**
-    - **EVIDENCIA > DECLARACIÓN**
-    - Gates de Evidencia Objetiva
-    - Matriz Autoritativa V2 (5 Dimensiones)
-    - Zero API Key / Zero Costo
+    - **Evidencia > declaración**
+    - Scoring determinístico en Python
+    - Cinco dimensiones de la rúbrica
+    - Sin API generativa en runtime
     """)
 
 tab_single, tab_batch = st.tabs(["📌 Evaluación Individual", "📋 Evaluación por Lote"])
 
 with tab_single:
+    st.markdown('<div class="ae-section-label">Evaluación individual</div>', unsafe_allow_html=True)
+    st.caption("Ingresá una URL pública de GitHub para obtener una evaluación trazable a su revisión exacta.")
+
     # Campo principal para ingresar la URL del repositorio objetivo
     repo_url = st.text_input(
         "URL pública del repositorio objetivo en GitHub",
@@ -150,7 +330,8 @@ with tab_single:
                     )
 
             # C. Resumen visual D1-D5
-            st.subheader("📊 Resumen por Dimensiones Oficiales")
+            st.subheader("📊 Resultado por dimensiones")
+            st.caption("Lectura compacta de las cinco dimensiones oficiales de la rúbrica.")
             if result.dimensions:
                 d_cols = st.columns(len(result.dimensions))
                 for idx, dim in enumerate(result.dimensions):
@@ -165,7 +346,7 @@ with tab_single:
             feedback = generate_student_feedback(result)
 
             st.divider()
-            st.subheader("🎓 Devolución al alumno evaluado")
+            st.subheader("🎓 Devolución para el trabajo evaluado")
 
             st.markdown(f"**Resumen general:**\n{feedback['resumen_general']}")
 
@@ -195,7 +376,7 @@ with tab_single:
             st.divider()
 
             # F. Expander: Ver desglose técnico completo
-            with st.expander("🔍 Ver desglose técnico completo", expanded=False):
+            with st.expander("📚 Evidencia y justificación por dimensión", expanded=False):
                 if not result.dimensions:
                     st.error("No se obtuvieron dimensiones evaluadas debido a un error de acceso.")
                 else:
@@ -222,8 +403,9 @@ with tab_single:
                         st.divider()
 
 with tab_batch:
-    st.subheader("📋 Evaluación por Lote de Repositorios (Hasta 50 URLs)")
-    st.caption("Ingresa múltiples URLs de GitHub (una por línea). Se evaluarán de forma determinística Zero-API.")
+    st.markdown('<div class="ae-section-label">Evaluación por lote</div>', unsafe_allow_html=True)
+    st.subheader("📋 Evaluación de repositorios")
+    st.caption("Ingresá hasta 50 URLs públicas de GitHub, una por línea. Todas se evalúan con el mismo motor determinístico.")
 
     batch_input = st.text_area(
         "URLs públicas de GitHub (una por línea, máx. 50)",
@@ -312,7 +494,7 @@ with tab_batch:
             st.divider()
 
             # Tabla Resumen
-            st.subheader("📑 Tabla Resumen de Evaluaciones")
+            st.subheader("📑 Resumen del lote")
             table_rows = []
             for i, res in enumerate(batch_results, start=1):
                 dims = res.dimensions
@@ -341,6 +523,7 @@ with tab_batch:
             st.dataframe(table_rows, use_container_width=True)
 
             st.subheader("🎓 Devolución por trabajo")
+            st.caption("Abrí cada trabajo para consultar la devolución docente, fortalezas y próximas acciones.")
             for i, res in enumerate(batch_results, start=1):
                 score_label = f"{res.final_score:.2f} puntos" if res.final_score is not None else "sin puntaje"
                 with st.expander(f"▶ {res.repository} — {score_label}", expanded=False):
@@ -395,4 +578,14 @@ with tab_batch:
                     )
                     priority = clean_text(format_aspect_description(weakest_dim)) or feedback["recomendacion_prioritaria"]
                     st.info(f"**{weakest_dim.dimension}:** {priority}")
+
+st.markdown(
+    """
+    <footer class="ae-footer">
+        Equipo Agente Evaluador · Programación de y con Agentes de IA · UCEMA ·
+        Evaluador V2 · Runtime determinístico · 0 tokens generativos
+    </footer>
+    """,
+    unsafe_allow_html=True,
+)
 
