@@ -7,6 +7,7 @@ from html import escape
 from datetime import datetime
 import streamlit as st
 from src import evidence_extractor
+from src.batch_summary import summarize_batch_results
 from src.evaluator_engine import evaluate_with_rate_limit_guard, run_evaluation, run_zip_evaluation
 from src.schema import EvaluationResult
 from src.ui_feedback import clean_text, format_aspect_description, generate_student_feedback
@@ -395,6 +396,211 @@ def _display_text(text):
     return escape(clean_text(str(text or "")).replace("**", "")).replace("\n", "<br>")
 
 
+def _format_dashboard_score(value):
+    return f"{value:.2f}" if value is not None else "No disponible"
+
+
+def _render_batch_dashboard(batch_results):
+    """Presenta estadísticas de resultados existentes sin reevaluar el lote."""
+    summary = summarize_batch_results(batch_results, approval_threshold=0)
+
+    st.subheader("Resumen del lote")
+    st.caption("Vista general de los trabajos evaluados")
+
+    primary_metrics = st.columns(4)
+    primary_metrics[0].metric("Procesados", summary["processed_count"])
+    primary_metrics[1].metric("Evaluados", summary["valid_count"])
+    primary_metrics[2].metric("Errores", summary["access_error_count"])
+    primary_metrics[3].metric("Nota promedio", _format_dashboard_score(summary["mean_score"]))
+
+    approval_threshold = st.slider(
+        "Umbral de aprobación",
+        min_value=0,
+        max_value=100,
+        value=60,
+        key="batch_approval_threshold",
+    )
+    st.caption(
+        "Umbral configurable para este resumen. No modifica la evaluación ni representa "
+        "necesariamente el criterio oficial de aprobación."
+    )
+    summary = summarize_batch_results(batch_results, approval_threshold=approval_threshold)
+
+    academic_metrics = st.columns(3)
+    academic_metrics[0].metric("Mediana", _format_dashboard_score(summary["median_score"]))
+    academic_metrics[1].metric("Aprobados", summary["approved_count"] if summary["valid_count"] else "No disponible")
+    approval_rate = (
+        f"{summary['approval_rate'] * 100:.1f}%"
+        if summary["approval_rate"] is not None
+        else "No disponible"
+    )
+    academic_metrics[2].metric("Tasa de aprobación", approval_rate)
+
+    if not summary["valid_count"]:
+        st.info("No hay evaluaciones válidas para calcular estadísticas académicas o promedios por dimensión.")
+        return
+
+    chart_rows = []
+    for index, average in enumerate(summary["dimension_averages"]):
+        if average is None:
+            continue
+        canonical_name = summary["dimension_names"][index]
+        label = f"D{index + 1} · {canonical_name}" if canonical_name else f"D{index + 1}"
+        chart_rows.append({"dimensión": label, "promedio": round(average, 2), "orden": index + 1})
+
+    if chart_rows:
+        st.subheader("Promedio por dimensión")
+        st.vega_lite_chart(
+            chart_rows,
+            {
+                "mark": {"type": "bar", "color": "#9F1239", "cornerRadiusEnd": 3},
+                "encoding": {
+                    "x": {
+                        "field": "dimensión",
+                        "type": "nominal",
+                        "sort": {"field": "orden", "order": "ascending"},
+                        "title": None,
+                    },
+                    "y": {
+                        "field": "promedio",
+                        "type": "quantitative",
+                        "scale": {"domain": [0, 100]},
+                        "title": "Promedio (%)",
+                    },
+                    "tooltip": [
+                        {"field": "dimensión", "type": "nominal", "title": "Dimensión"},
+                        {"field": "promedio", "type": "quantitative", "title": "Promedio (%)"},
+                    ],
+                },
+                "height": 260,
+            },
+            use_container_width=True,
+        )
+
+
+def _render_batch_results(batch_results, run_metadata):
+    """Renderiza un lote ya procesado; no consulta ni vuelve a evaluar repositorios."""
+    batch_status = summarize_batch_results(batch_results, approval_threshold=60)
+    if batch_status["valid_count"]:
+        _render_batch_dashboard(batch_results)
+    else:
+        st.subheader("Estado del lote")
+        status_metrics = st.columns(2)
+        status_metrics[0].metric("Procesados", batch_status["processed_count"])
+        status_metrics[1].metric("Errores", batch_status["access_error_count"])
+        st.info("No hay evaluaciones válidas para calcular estadísticas académicas del lote.")
+    st.caption(
+        f"URLs recibidas: {run_metadata['urls_received']} · "
+        f"URLs únicas procesadas: {run_metadata['processed_urls']} · "
+        f"Tiempo total: {run_metadata['total_elapsed_time']:.2f} s · "
+        f"Tiempo promedio: {run_metadata['average_time']:.2f} s · "
+        "Tokens generativos: 0 · Costo API generativo: USD 0.00"
+    )
+    st.divider()
+
+    st.subheader("📑 Detalle de trabajos")
+    table_rows = []
+    for index, result in enumerate(batch_results, start=1):
+        dimensions = result.dimensions
+        dimension_scores = [
+            f"{dimensions[position].score:.2f}"
+            if len(dimensions) > position and dimensions[position].score is not None
+            else "0.00"
+            for position in range(5)
+        ]
+        status_detail = result.evaluation_status.upper()
+        if result.evaluation_status != "completed" and result.integrity_notes:
+            status_detail = f"{status_detail}: {result.integrity_notes[0]}"
+        table_rows.append(
+            {
+                "#": index,
+                "repositorio": result.repository,
+                "revisión evaluada": result.evaluated_revision,
+                "estado / error": status_detail,
+                "nota final": f"{result.final_score:.2f}" if result.final_score is not None else "N/A",
+                "D1": dimension_scores[0],
+                "D2": dimension_scores[1],
+                "D3": dimension_scores[2],
+                "D4": dimension_scores[3],
+                "D5": dimension_scores[4],
+            }
+        )
+    st.dataframe(table_rows, use_container_width=True)
+
+    st.subheader("🎓 Devolución por trabajo")
+    st.caption("Abrí cada trabajo para consultar la devolución docente, fortalezas y próximas acciones.")
+    for result in batch_results:
+        score_label = f"{result.final_score:.2f} puntos" if result.final_score is not None else "sin puntaje"
+        with st.expander(f"▶ {result.repository} — {score_label}", expanded=False):
+            if result.evaluation_status != "completed":
+                error_detail = "; ".join(result.integrity_notes) or "No se pudo completar la evaluación."
+                st.error(error_detail)
+                continue
+            if not result.dimensions:
+                st.warning("La evaluación finalizó sin dimensiones para generar devolución.")
+                continue
+
+            feedback = generate_student_feedback(result)
+            _render_feedback_card(
+                "Devolución al alumno",
+                "summary",
+                f"<p>{_display_text(feedback['resumen_general'])}</p>",
+            )
+            strengths = sorted(
+                [dimension for dimension in result.dimensions if dimension.level_percent == 100],
+                key=lambda dimension: (dimension.level_percent, dimension.weight),
+                reverse=True,
+            )[:3]
+            if strengths:
+                strength_items = []
+                for strength in strengths:
+                    evidence = strength.evidence[0] if strength.evidence else "Sin evidencia citada"
+                    strength_items.append(
+                        f"<strong>{escape(strength.dimension)}</strong> "
+                        f"({strength.level_percent}%): {_display_text(strength.justification)} "
+                        f"<span>— Evidencia: {escape(evidence)}</span>"
+                    )
+                _render_feedback_card("✅ Fortalezas", "strength", _feedback_list(strength_items))
+            else:
+                st.caption("No se identificaron fortalezas suficientemente demostradas.")
+
+            improvement_dimensions = sorted(
+                [
+                    (index, dimension)
+                    for index, dimension in enumerate(result.dimensions)
+                    if (dimension.level_percent or 0) < 100
+                ],
+                key=lambda item: ((item[1].level_percent or 0), item[0]),
+            )[:3]
+            if improvement_dimensions:
+                improvement_items = [
+                    (
+                        f"<strong>{escape(aspect.dimension)}</strong> "
+                        f"({aspect.level_percent}%): "
+                        f"{_display_text(format_aspect_description(aspect))}"
+                    )
+                    for _, aspect in improvement_dimensions
+                ]
+                _render_feedback_card(
+                    "⚠ Aspectos a mejorar",
+                    "improvement",
+                    _feedback_list(improvement_items),
+                )
+            else:
+                st.caption("No se identificaron aspectos pendientes.")
+
+            _, weakest_dimension = min(
+                enumerate(result.dimensions),
+                key=lambda item: ((item[1].level_percent or 0), item[0]),
+            )
+            priority = clean_text(format_aspect_description(weakest_dimension)) or feedback["recomendacion_prioritaria"]
+            _render_feedback_card(
+                "🎯 Prioridad principal",
+                "priority",
+                f"<p><strong>{escape(weakest_dimension.dimension)}:</strong> {_display_text(priority)}</p>",
+            )
+
+
 def _render_evaluation_result(result, technical_mode, evaluation_diagnostics):
     """Presenta un EvaluationResult sin distinguir su fuente de entrada."""
     st.divider()
@@ -758,128 +964,19 @@ else:
             avg_time = total_elapsed_time / total_urls if total_urls > 0 else 0.0
 
             status_text.success("✅ Evaluación del lote completada con éxito.")
+            st.session_state["batch_results"] = batch_results
+            st.session_state["batch_run_metadata"] = {
+                "urls_received": urls_received,
+                "processed_urls": total_urls,
+                "total_elapsed_time": total_elapsed_time,
+                "average_time": avg_time,
+            }
 
-            st.divider()
-
-            # Métricas del Lote
-            st.subheader("📊 Métrica del Lote Evaluado")
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("URLs Recibidas", urls_received)
-            m2.metric("URLs Válidas Procesadas", total_urls)
-            m3.metric("Evaluaciones Completadas", completed_count)
-            m4.metric("Errores / Fallos Acceso", error_count)
-
-            t1, t2, t3, t4 = st.columns(4)
-            t1.metric("Tiempo Total", f"{total_elapsed_time:.2f} s")
-            t2.metric("Tiempo Promedio / Eval", f"{avg_time:.2f} s")
-            t3.metric("Tokens Generativos", "0")
-            t4.metric("Costo API Generativo", "USD 0.00")
-
-            st.divider()
-
-            # Tabla Resumen
-            st.subheader("📑 Resumen del lote")
-            table_rows = []
-            for i, res in enumerate(batch_results, start=1):
-                dims = res.dimensions
-                d1 = f"{dims[0].score:.2f}" if len(dims) > 0 and dims[0].score is not None else "0.00"
-                d2 = f"{dims[1].score:.2f}" if len(dims) > 1 and dims[1].score is not None else "0.00"
-                d3 = f"{dims[2].score:.2f}" if len(dims) > 2 and dims[2].score is not None else "0.00"
-                d4 = f"{dims[3].score:.2f}" if len(dims) > 3 and dims[3].score is not None else "0.00"
-                d5 = f"{dims[4].score:.2f}" if len(dims) > 4 and dims[4].score is not None else "0.00"
-                status_detail = res.evaluation_status.upper()
-                if res.evaluation_status != "completed" and res.integrity_notes:
-                    status_detail = f"{status_detail}: {res.integrity_notes[0]}"
-
-                table_rows.append({
-                    "#": i,
-                    "repositorio": res.repository,
-                    "revisión evaluada": res.evaluated_revision,
-                    "estado / error": status_detail,
-                    "nota final": f"{res.final_score:.2f}" if res.final_score is not None else "N/A",
-                    "D1": d1,
-                    "D2": d2,
-                    "D3": d3,
-                    "D4": d4,
-                    "D5": d5,
-                })
-
-            st.dataframe(table_rows, use_container_width=True)
-
-            st.subheader("🎓 Devolución por trabajo")
-            st.caption("Abrí cada trabajo para consultar la devolución docente, fortalezas y próximas acciones.")
-            for i, res in enumerate(batch_results, start=1):
-                score_label = f"{res.final_score:.2f} puntos" if res.final_score is not None else "sin puntaje"
-                with st.expander(f"▶ {res.repository} — {score_label}", expanded=False):
-                    if res.evaluation_status != "completed":
-                        error_detail = "; ".join(res.integrity_notes) or "No se pudo completar la evaluación."
-                        st.error(error_detail)
-                        continue
-
-                    if not res.dimensions:
-                        st.warning("La evaluación finalizó sin dimensiones para generar devolución.")
-                        continue
-
-                    feedback = generate_student_feedback(res)
-                    _render_feedback_card(
-                        "Devolución al alumno",
-                        "summary",
-                        f"<p>{_display_text(feedback['resumen_general'])}</p>",
-                    )
-
-                    strengths = sorted(
-                        [dim for dim in res.dimensions if dim.level_percent == 100],
-                        key=lambda dim: (dim.level_percent, dim.weight),
-                        reverse=True,
-                    )[:3]
-                    if strengths:
-                        strength_items = []
-                        for strength in strengths:
-                            evidence = strength.evidence[0] if strength.evidence else "Sin evidencia citada"
-                            strength_items.append(
-                                f"<strong>{escape(strength.dimension)}</strong> "
-                                f"({strength.level_percent}%): {_display_text(strength.justification)} "
-                                f"<span>— Evidencia: {escape(evidence)}</span>"
-                            )
-                        _render_feedback_card("✅ Fortalezas", "strength", _feedback_list(strength_items))
-                    else:
-                        st.caption("No se identificaron fortalezas suficientemente demostradas.")
-
-                    improvement_dimensions = sorted(
-                        [
-                            (index, dim)
-                            for index, dim in enumerate(res.dimensions)
-                            if (dim.level_percent or 0) < 100
-                        ],
-                        key=lambda item: ((item[1].level_percent or 0), item[0]),
-                    )[:3]
-                    if improvement_dimensions:
-                        improvement_items = [
-                            (
-                                f"<strong>{escape(aspect.dimension)}</strong> "
-                                f"({aspect.level_percent}%): "
-                                f"{_display_text(format_aspect_description(aspect))}"
-                            )
-                            for _, aspect in improvement_dimensions
-                        ]
-                        _render_feedback_card(
-                            "⚠ Aspectos a mejorar",
-                            "improvement",
-                            _feedback_list(improvement_items),
-                        )
-                    else:
-                        st.caption("No se identificaron aspectos pendientes.")
-
-                    weakest_index, weakest_dim = min(
-                        enumerate(res.dimensions),
-                        key=lambda item: ((item[1].level_percent or 0), item[0]),
-                    )
-                    priority = clean_text(format_aspect_description(weakest_dim)) or feedback["recomendacion_prioritaria"]
-                    _render_feedback_card(
-                        "🎯 Prioridad principal",
-                        "priority",
-                        f"<p><strong>{escape(weakest_dim.dimension)}:</strong> {_display_text(priority)}</p>",
-                    )
+    saved_batch_results = st.session_state.get("batch_results")
+    saved_batch_metadata = st.session_state.get("batch_run_metadata")
+    if saved_batch_results is not None and saved_batch_metadata is not None:
+        st.divider()
+        _render_batch_results(saved_batch_results, saved_batch_metadata)
 
 st.markdown(
     """
