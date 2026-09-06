@@ -112,13 +112,17 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         ev2 = ["DECISIONES.md presente, sin decisiones sustantivas reconstruibles"]
         just2 = "Existe un registro, pero no permite reconstruir una decisión con contexto, cambio y motivo o impacto."
         missing2 = "Documentar una decisión sustantiva con contexto/problema, cambio y motivo/impacto."
-    elif (ev["decision_count"] >= 2 and ev["has_process_iteration"] and ev["has_process_change"]
+    # La cantidad de decisiones es evidencia auxiliar de amplitud histórica,
+    # no un mínimo para los niveles altos. Una unidad sustantiva puede reunir
+    # por sí sola contexto, falla, corrección, resultado y trazabilidad.
+    elif (ev["has_process_iteration"] and ev["has_process_change"]
           and ev["has_decision_artifact_links"] and ev["mandatory_structure"]["is_complete"]):
         lvl2 = 100
         ev2 = [f"Historia con {ev['decision_count']} decisiones sustantivas, iteraciones, cambios y artefactos vinculados"]
         just2 = "Las decisiones, correcciones y cambios documentados forman una historia coherente y trazable con los artefactos disponibles."
         missing2 = "Mantener la trazabilidad de decisiones y artefactos en nuevas iteraciones."
-    elif ev["decision_count"] >= 2:
+    elif ((ev["has_process_iteration"] and ev["has_process_change"] and ev["has_decision_artifact_links"])
+          or ev["decision_count"] >= 2):
         lvl2 = 75
         ev2 = [f"DECISIONES.md con {ev['decision_count']} decisiones sustantivas"]
         just2 = "Hay múltiples decisiones o iteraciones sustantivas, pero la trazabilidad completa del proceso permanece incompleta."
