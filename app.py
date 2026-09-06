@@ -23,10 +23,10 @@ st.markdown(
     <style>
         :root {
             --ae-ink: #1b2430;
-            --ae-muted: #5b6573;
-            --ae-border: #d9dee5;
+            --ae-muted: #526273;
+            --ae-border: #cfd8e1;
             --ae-surface: #ffffff;
-            --ae-soft: #f3f5f7;
+            --ae-soft: #e8eef3;
             --ae-accent: #9e1b32;
             --ae-petrol: #17324d;
             --ae-sidebar: #14263a;
@@ -77,6 +77,10 @@ st.markdown(
             color: var(--ae-muted) !important;
             font-size: 0.86rem;
             line-height: 1.45;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+            color: #cdd9e3 !important;
         }
 
         [data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"] p,
@@ -169,13 +173,28 @@ st.markdown(
         }
 
         [data-testid="stTabs"] button {
-            color: #4b5968;
+            background: transparent;
+            border-radius: 8px 8px 0 0;
+            color: #3f4f5f;
             font-size: 0.95rem;
             font-weight: 700;
+            padding: 0.7rem 1rem;
         }
 
         [data-testid="stTabs"] button[aria-selected="true"] {
+            background: #ffffff;
             color: var(--ae-accent);
+            box-shadow: inset 0 -3px 0 var(--ae-accent);
+        }
+
+        [data-testid="stTabs"] button:hover {
+            background: #dde5ec;
+            color: var(--ae-petrol);
+        }
+
+        [data-testid="stTabs"] button:focus-visible {
+            outline: 2px solid var(--ae-accent);
+            outline-offset: -2px;
         }
 
         [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
@@ -196,6 +215,11 @@ st.markdown(
             font-weight: 700;
         }
 
+        [data-testid="stExpander"] summary:hover,
+        [data-testid="stExpander"] summary:hover p {
+            color: var(--ae-petrol) !important;
+        }
+
         div[data-testid="stVerticalBlockBorderWrapper"] {
             background: #ffffff;
             border-color: #cfdae1;
@@ -205,6 +229,11 @@ st.markdown(
 
         [data-testid="stAlert"] {
             border-radius: 10px;
+        }
+
+        [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p,
+        [data-testid="stAlert"] [data-testid="stMarkdownContainer"] li {
+            color: var(--ae-ink);
         }
 
         [data-testid="stDataFrame"] {
@@ -232,6 +261,11 @@ st.markdown(
         button[kind="primary"]:hover {
             background: #682535;
             border-color: #682535;
+        }
+
+        button[kind="primary"]:focus-visible {
+            outline: 3px solid rgba(158, 27, 50, 0.3);
+            outline-offset: 2px;
         }
 
         [data-testid="stTextInput"] input,
@@ -398,7 +432,7 @@ st.markdown(
 
         .ae-footer {
             border-top: 1px solid var(--ae-border);
-            color: #5b6573;
+            color: #46586a;
             font-size: 0.82rem;
             margin-top: 2.5rem;
             padding-top: 1rem;
