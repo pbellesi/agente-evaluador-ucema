@@ -4,7 +4,37 @@ from typing import Optional, Callable
 
 from src.schema import EvaluationResult
 from src.evidence_extractor import extract_objective_evidence
-from src.github_fetcher import fetch_repository_data
+from src.github_fetcher import GitHubRequestError, fetch_repository_data
+
+
+PRIMARY_RATE_LIMIT_MARKER = "[GITHUB_PRIMARY_RATE_LIMIT]"
+
+
+def rate_limit_access_error_result(repo_url: str) -> EvaluationResult:
+    """Resultado aislado para URLs no consultadas tras un límite primario en batch."""
+    message = "Límite temporal de consultas a GitHub alcanzado durante este lote. Reintentá más tarde."
+    return EvaluationResult(
+        repository=repo_url,
+        evaluated_revision="unknown",
+        evaluation_date=datetime.now().strftime("%Y-%m-%d"),
+        evaluation_status="access_error",
+        dimensions=[],
+        final_score=None,
+        concrete_improvement=message,
+        integrity_notes=[f"{PRIMARY_RATE_LIMIT_MARKER} {message}"],
+    )
+
+
+def is_primary_rate_limit_result(result: EvaluationResult) -> bool:
+    return any(note.startswith(PRIMARY_RATE_LIMIT_MARKER) for note in result.integrity_notes or [])
+
+
+def evaluate_with_rate_limit_guard(repo_url: str, primary_rate_limit_active: bool) -> tuple[EvaluationResult, bool]:
+    """Evita consultas adicionales de batch después de un límite primario confirmado."""
+    if primary_rate_limit_active:
+        return rate_limit_access_error_result(repo_url), True
+    result = run_evaluation(repo_url)
+    return result, is_primary_rate_limit_result(result)
 from src.deterministic_evaluator import evaluate_repository_deterministically
 
 
@@ -28,6 +58,17 @@ def run_evaluation(
     # 1. Descargar e inspeccionar datos del repositorio objetivo
     try:
         repo_data = fetch_repository_data(repo_url)
+    except GitHubRequestError as error:
+        return EvaluationResult(
+            repository=repo_url,
+            evaluated_revision="unknown",
+            evaluation_date=datetime.now().strftime("%Y-%m-%d"),
+            evaluation_status="access_error",
+            dimensions=[],
+            final_score=None,
+            concrete_improvement=str(error),
+            integrity_notes=[f"[GITHUB_{error.category}] {error}"],
+        )
     except Exception as e:
         return EvaluationResult(
             repository=repo_url,

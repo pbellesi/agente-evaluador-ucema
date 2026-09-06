@@ -8,6 +8,7 @@ import io
 import os
 import zipfile
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
@@ -36,6 +37,16 @@ GOVERNANCE_KEYWORDS = (
     "permission", "supervision", "supervisión", "control", "auditoria", "auditoría",
 )
 TRUNCATION_MARKER = b"\n... [TRUNCADO POR LIMITE DE RECUPERACION]"
+GITHUB_API_ROOT = "https://api.github.com"
+
+
+class GitHubRequestError(RuntimeError):
+    """Error de acceso a GitHub con categoría segura para usuarios y batch."""
+
+    def __init__(self, category: str, message: str, details: Optional[dict] = None):
+        super().__init__(message)
+        self.category = category
+        self.details = details or {}
 
 # Defaults configurables: las cuotas sólo garantizan cobertura durante fase 1.
 DEFAULT_RETRIEVAL_CONFIG = {
@@ -65,6 +76,96 @@ def _merged_config(overrides: Optional[dict] = None) -> dict:
         else:
             config[key] = value
     return config
+
+
+def _github_token() -> Optional[str]:
+    """Obtiene un token opcional sin exponerlo ni persistirlo."""
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+    if token:
+        return token
+    try:
+        import streamlit as st
+        secret = st.secrets.get("GITHUB_TOKEN", "")
+        return secret.strip() if isinstance(secret, str) and secret.strip() else None
+    except Exception:
+        return None
+
+
+def _github_headers() -> dict:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "agente-evaluador-ucema",
+    }
+    token = _github_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _header(response, name: str) -> Optional[str]:
+    headers = getattr(response, "headers", {}) or {}
+    for key, value in headers.items():
+        if key.lower() == name.lower():
+            return str(value)
+    return None
+
+
+def classify_github_error(response) -> dict:
+    """Clasifica respuestas fallidas sin incorporar datos sensibles al mensaje."""
+    status_code = int(getattr(response, "status_code", 0) or 0)
+    try:
+        payload = response.json() or {}
+    except Exception:
+        payload = {}
+    github_message = payload.get("message") if isinstance(payload, dict) else None
+    message_lower = str(github_message or "").lower()
+    details = {
+        "status_code": status_code,
+        "rate_limit_limit": _header(response, "X-RateLimit-Limit"),
+        "rate_limit_remaining": _header(response, "X-RateLimit-Remaining"),
+        "rate_limit_used": _header(response, "X-RateLimit-Used"),
+        "rate_limit_reset": _header(response, "X-RateLimit-Reset"),
+        "retry_after": _header(response, "Retry-After"),
+        "github_message": github_message,
+    }
+    if status_code == 404:
+        category = "NOT_FOUND"
+    elif status_code in {403, 429} and details["rate_limit_remaining"] == "0":
+        category = "PRIMARY_RATE_LIMIT"
+    elif status_code in {403, 429} and (
+        details["retry_after"] or "secondary rate limit" in message_lower
+    ):
+        category = "SECONDARY_RATE_LIMIT"
+    elif status_code == 403:
+        category = "FORBIDDEN_OTHER"
+    else:
+        category = "UNKNOWN"
+    return {"category": category, **details}
+
+
+def _github_error_message(details: dict) -> str:
+    category = details["category"]
+    if category == "PRIMARY_RATE_LIMIT":
+        reset = details.get("rate_limit_reset")
+        if reset and reset.isdigit():
+            reset_at = datetime.fromtimestamp(int(reset), tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            return f"Límite temporal de consultas a GitHub alcanzado. Reintentá después de {reset_at}."
+        return "Límite temporal de consultas a GitHub alcanzado. Reintentá más tarde."
+    if category == "SECONDARY_RATE_LIMIT":
+        return "GitHub limitó temporalmente la frecuencia de consultas. Reintentá en unos minutos."
+    if category == "FORBIDDEN_OTHER":
+        return "GitHub rechazó el acceso al repositorio o recurso solicitado."
+    if category == "NOT_FOUND":
+        return "GitHub no encontró el repositorio o la referencia solicitada."
+    return "GitHub no pudo completar la consulta solicitada."
+
+
+def _github_get(url: str, timeout: int):
+    response = requests.get(url, headers=_github_headers(), timeout=timeout)
+    if 200 <= response.status_code < 300:
+        return response
+    details = classify_github_error(response)
+    raise GitHubRequestError(details["category"], _github_error_message(details), details)
 
 
 def parse_github_url(url: str) -> Tuple[str, str, Optional[str], str]:
@@ -324,24 +425,30 @@ def _coverage(records: Iterable[dict], loaded_paths: set, label: Optional[str] =
 
 
 def _resolve_revision(owner: str, repo: str, requested_revision: str) -> Tuple[str, str]:
-    response = requests.get(
-        f"https://api.github.com/repos/{owner}/{repo}/commits/{quote(requested_revision, safe='')}",
-        timeout=10,
+    try:
+        response = _github_get(
+            f"{GITHUB_API_ROOT}/repos/{owner}/{repo}/commits/{quote(requested_revision, safe='')}",
+            timeout=10,
+        )
+    except GitHubRequestError as error:
+        if error.category == "NOT_FOUND":
+            raise GitHubRequestError(
+                error.category,
+                f"No se pudo resolver la referencia '{requested_revision}' en {owner}/{repo}. {error}",
+                error.details,
+            ) from error
+        raise
+    sha = response.json().get("sha")
+    if sha:
+        return requested_revision, sha
+    raise GitHubRequestError(
+        "UNKNOWN",
+        f"GitHub respondió sin SHA al resolver la referencia '{requested_revision}' en {owner}/{repo}.",
     )
-    if response.status_code == 200:
-        sha = response.json().get("sha")
-        if sha:
-            return requested_revision, sha
-    raise RuntimeError(f"No se pudo resolver la referencia '{requested_revision}' en {owner}/{repo}.")
 
 
 def _get_default_branch(owner: str, repo: str) -> str:
-    response = requests.get(f"https://api.github.com/repos/{owner}/{repo}", timeout=10)
-    if response.status_code != 200:
-        raise RuntimeError(
-            f"No se pudo consultar la metadata de {owner}/{repo} para obtener la rama por defecto "
-            f"(HTTP {response.status_code})."
-        )
+    response = _github_get(f"{GITHUB_API_ROOT}/repos/{owner}/{repo}", timeout=10)
     default_branch = response.json().get("default_branch")
     if not isinstance(default_branch, str) or not default_branch.strip():
         raise RuntimeError(f"La metadata de {owner}/{repo} no informa una rama por defecto válida.")
@@ -355,9 +462,7 @@ def fetch_repository_data(github_url: str, revision: Optional[str] = None, retri
     if not requested_revision:
         requested_revision = _get_default_branch(owner, repo)
     resolved_ref, commit_sha = _resolve_revision(owner, repo, requested_revision)
-    response = requests.get(f"https://api.github.com/repos/{owner}/{repo}/zipball/{commit_sha}", timeout=30)
-    if response.status_code != 200:
-        raise RuntimeError(f"No se pudo descargar {owner}/{repo} en {commit_sha}.")
+    response = _github_get(f"{GITHUB_API_ROOT}/repos/{owner}/{repo}/zipball/{commit_sha}", timeout=30)
     inventory: List[dict] = []
     zip_members: Dict[str, str] = {}
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
