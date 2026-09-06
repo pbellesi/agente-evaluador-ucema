@@ -722,6 +722,8 @@ En un entorno con checkout del proyecto, terminal y acceso a la herramienta loca
 
 Esta vía no forma parte del runtime de Streamlit: la aplicación pública continúa llamando directamente a `evaluator_engine`, conserva ejecución determinística, **0 tokens generativos** y **USD 0 de API generativa** por evaluación. Un ChatGPT o Claude genérico sin workspace, terminal y `evaluate_tool.py` no puede simular una evaluación real.
 
+La ruta operativa se validó end-to-end con un ZIP y con un repositorio GitHub fijado a SHA: en ambos casos el agente invocó una sola vez `evaluate_tool` y devolvió un `EvaluationResult` semánticamente idéntico a la ejecución directa. Ver [validación end-to-end del System Prompt](docs/validacion_system_prompt.md).
+
 La v1 se utilizaba mediante una herramienta de IA con capacidad de inspección y no tenía una CLI propia. Se preserva como evidencia del proceso; las pruebas y la calibración evidenciaron variabilidad y DEC-015 operacionalizó el scoring mediante un motor determinístico. La ruta actual del System Prompt usa ese motor como herramienta y no revierte esa decisión.
 
 ### Casos y resultados observados

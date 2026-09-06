@@ -2,7 +2,7 @@
 
 ## Fecha de actualización
 
-El motor integrado en `main` permanece congelado. La vía operativa del agente se encuentra en la rama `feat/system-prompt-agent`, pendiente de prueba end-to-end y merge.
+El motor integrado en `main` permanece congelado. La vía operativa del agente se encuentra en la rama `feat/system-prompt-agent`, validada end-to-end y pendiente de PR y merge.
 
 ## Fase actual
 
@@ -26,6 +26,7 @@ Cierre de entrega: motor final integrado y congelado, con la vía operativa del 
 - Agente corrector v1 preservado en `agente/`, con contrato JSON y validación inicial contra Tramposo.
 - `agente/evaluate_tool.py` implementado y `agente/system_prompt.md` operacionalizado: un agente con workspace y terminal puede invocar el mismo `evaluator_engine`; Streamlit y scoring no cambiaron.
 - Validación de esta implementación: 115/115 pruebas verdes.
+- E2E ZIP: PASS sobre `casos/excelente` (88,75; D1–D5 100/100/100/25/100). E2E GitHub real: PASS sobre PULSO en SHA `0f0092a004169e6b64b0f0701eba3baf904cf7db` (85,0; D1–D5 100/100/75/75/50). Ambas pruebas retransmitieron un `EvaluationResult` semánticamente idéntico a la ejecución directa y no modificaron código ni scoring.
 - Runtime final determinístico integrado en `src/` y expuesto por `app.py`: no usa APIs generativas, registra la revisión SHA evaluada y trata el contenido objetivo como evidencia.
 - Los tres casos completos e integrados: excelente, flojo y tramposo.
 - Calibración humano/agente realizada y registrada en `calibracion.md`, con desacuerdos y limitaciones de trazabilidad explícitos.
@@ -52,8 +53,7 @@ Cierre de entrega: motor final integrado y congelado, con la vía operativa del 
 
 ## Pendiente inmediato
 
-- Prueba real end-to-end del agente con `evaluate_tool` en un entorno con workspace y terminal.
-- Merge de `feat/system-prompt-agent`.
+- PR y merge de `feat/system-prompt-agent`.
 - Revisión de despliegue/documentación y preparación de defensa/entrega; la publicación en el campus no está acreditada por GitHub.
 
 ## Bloqueos / inconsistencias conocidas
@@ -64,8 +64,8 @@ Cierre de entrega: motor final integrado y congelado, con la vía operativa del 
 
 ## Próximo milestone
 
-Entrega documentalmente consistente, con motor congelado, prueba end-to-end del agente completada, revisión de despliegue y enlace presentado en el campus.
+Entrega documentalmente consistente, con motor congelado, E2E del agente validado, revisión de despliegue y enlace presentado en el campus.
 
 ## Próximo paso
 
-Ejecutar la prueba end-to-end del agente con herramienta y completar el merge de `feat/system-prompt-agent`.
+Crear PR y completar el merge de `feat/system-prompt-agent`.
