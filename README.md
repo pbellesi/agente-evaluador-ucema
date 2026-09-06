@@ -687,7 +687,7 @@ Según [calibracion.md](calibracion.md), se cargó el prompt operativo del corre
 
 ### Entregables completos y evidencia
 
-Las cuatro piezas obligatorias iniciales y el motor determinístico están integrados en `main`; la vía operativa actual del System Prompt está preparada en `feat/system-prompt-agent`, pendiente de prueba end-to-end y merge. Las limitaciones se detallan en el apartado siguiente:
+Las cuatro piezas obligatorias iniciales y el motor determinístico están integrados en `main`; el System Prompt operativo fue **VALIDADO** end-to-end en `feat/system-prompt-agent` por las rutas ZIP y GitHub, y queda pendiente de merge. La evidencia está en [docs/validacion_system_prompt.md](docs/validacion_system_prompt.md). Las limitaciones se detallan en el apartado siguiente:
 
 | Pieza | Qué contiene y qué se comprobó | Evidencia |
 |---|---|---|
@@ -809,7 +809,7 @@ La jerarquía es: consigna oficial del parcial → consigna/rúbrica oficial del
 
 Las limitaciones anteriores describen la primera calibración y están respaldadas por [calibracion.md](calibracion.md), [agente/README.md](agente/README.md) y [DECISIONES.md](DECISIONES.md). El re-test de aquella calibración histórica no se recreó retroactivamente; la validación posterior del motor es un ciclo separado, trazado mediante el contrato sintético y las pruebas de aceptación.
 
-Las cuatro piezas iniciales y el motor determinístico están integrados en `main`. La vía operativa actual del System Prompt está preparada en `feat/system-prompt-agent` y queda pendiente de prueba end-to-end y merge. Persisten límites reales: disponibilidad de GitHub, red y hosting; heurísticas determinísticas que pueden requerir corrección ante un bug objetivo nuevo; y la ausencia de inmunidad absoluta frente a prompt injection. El contenido del repositorio se trata como datos, no como instrucciones, y las señales de manipulación se reportan como contradicciones o invalidaciones cuando la evidencia lo justifica.
+Las cuatro piezas iniciales y el motor determinístico están integrados en `main`. La vía operativa del System Prompt en `feat/system-prompt-agent` fue **VALIDADA** end-to-end por ZIP y GitHub real; requiere agente con workspace, terminal y herramienta local, y queda pendiente de merge. Persisten límites reales: disponibilidad de GitHub, red y hosting; heurísticas determinísticas que pueden requerir corrección ante un bug objetivo nuevo; y la ausencia de inmunidad absoluta frente a prompt injection. El contenido del repositorio se trata como datos, no como instrucciones, y las señales de manipulación se reportan como contradicciones o invalidaciones cuando la evidencia lo justifica.
 
 ## Qué aprendí
 
