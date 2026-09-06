@@ -22,20 +22,21 @@ st.markdown(
     """
     <style>
         :root {
-            --ae-ink: #173042;
-            --ae-muted: #637382;
-            --ae-border: #d9e2e8;
+            --ae-ink: #1b2430;
+            --ae-muted: #5b6573;
+            --ae-border: #d9dee5;
             --ae-surface: #ffffff;
-            --ae-soft: #f3f6f8;
-            --ae-accent: #7e2d3f;
-            --ae-petrol: #123c50;
-            --ae-success: #2f765a;
-            --ae-warning: #9a6a21;
-            --ae-risk: #a94f57;
+            --ae-soft: #f3f5f7;
+            --ae-accent: #9e1b32;
+            --ae-petrol: #17324d;
+            --ae-sidebar: #14263a;
+            --ae-success: #2f6f55;
+            --ae-warning: #966b22;
+            --ae-risk: #a3434f;
         }
 
         [data-testid="stAppViewContainer"] {
-            background: #f4f6f8;
+            background: var(--ae-soft);
             color: var(--ae-ink);
         }
 
@@ -46,31 +47,61 @@ st.markdown(
         }
 
         [data-testid="stSidebar"] {
-            background: #123044;
+            background: var(--ae-sidebar);
         }
 
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] p {
-            color: #edf3f9;
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 {
+            color: #ffffff;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li,
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+            color: #d9e2ea !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+        [data-testid="stSidebar"] small {
+            color: #c7d3dd !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stExpander"] {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow: none;
+        }
+
+        [data-testid="stAppViewContainer"] [data-testid="stCaptionContainer"] {
+            color: var(--ae-muted) !important;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        [data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"] p,
+        [data-testid="stAppViewContainer"] label[data-testid="stWidgetLabel"] p {
+            color: var(--ae-ink) !important;
+            font-size: 0.92rem;
+            font-weight: 700;
         }
 
         .ae-hero {
             align-items: center;
             background: var(--ae-petrol);
-            border: 1px solid #0c2b3c;
+            border: 1px solid #102b43;
             border-left: 6px solid var(--ae-accent);
-            border-radius: 20px;
-            box-shadow: 0 10px 24px rgba(18, 60, 80, 0.16);
+            border-radius: 22px;
+            box-shadow: 0 14px 30px rgba(23, 50, 77, 0.18);
             display: flex;
             gap: 1.5rem;
             justify-content: space-between;
-            margin-bottom: 1.6rem;
-            padding: 1.45rem 1.6rem;
+            margin-bottom: 2rem;
+            padding: 1.8rem 2rem;
         }
 
         .ae-eyebrow {
-            color: #b8d5df;
+            color: #f1c5cd;
             font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.08em;
@@ -87,14 +118,15 @@ st.markdown(
 
         .ae-hero h1 {
             color: #ffffff;
-            font-size: 2.25rem;
+            font-size: 2.55rem;
             letter-spacing: -0.03em;
             line-height: 1.15;
             margin: 0.25rem 0;
         }
 
         .ae-hero p {
-            color: #d6e6ea;
+            color: #edf2f6;
+            font-size: 1.05rem;
             margin: 0;
         }
 
@@ -107,11 +139,11 @@ st.markdown(
         }
 
         .ae-badge {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.24);
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.32);
             border-radius: 999px;
             color: #ffffff;
-            font-size: 0.77rem;
+            font-size: 0.82rem;
             font-weight: 650;
             padding: 0.35rem 0.65rem;
             white-space: nowrap;
@@ -137,8 +169,9 @@ st.markdown(
         }
 
         [data-testid="stTabs"] button {
-            color: var(--ae-muted);
-            font-weight: 650;
+            color: #4b5968;
+            font-size: 0.95rem;
+            font-weight: 700;
         }
 
         [data-testid="stTabs"] button[aria-selected="true"] {
@@ -157,6 +190,19 @@ st.markdown(
             margin-bottom: 0.75rem;
         }
 
+        [data-testid="stExpander"] summary,
+        [data-testid="stExpander"] summary p {
+            color: var(--ae-ink) !important;
+            font-weight: 700;
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            background: #ffffff;
+            border-color: #cfdae1;
+            border-radius: 18px;
+            box-shadow: 0 7px 18px rgba(23, 48, 66, 0.06);
+        }
+
         [data-testid="stAlert"] {
             border-radius: 10px;
         }
@@ -169,51 +215,101 @@ st.markdown(
         }
 
         button[kind="primary"] {
-            background: var(--ae-petrol);
-            border-color: var(--ae-petrol);
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(18, 60, 80, 0.18);
-            font-weight: 650;
-            min-height: 2.8rem;
+            background: var(--ae-accent);
+            border-color: var(--ae-accent);
+            border-radius: 12px;
+            box-shadow: 0 6px 14px rgba(126, 45, 63, 0.24);
+            font-size: 0.97rem;
+            font-weight: 750;
+            min-height: 3rem;
+        }
+
+        button[kind="primary"],
+        button[kind="primary"] * {
+            color: #ffffff !important;
         }
 
         button[kind="primary"]:hover {
-            background: #0d3041;
-            border-color: #0d3041;
+            background: #682535;
+            border-color: #682535;
         }
 
         [data-testid="stTextInput"] input,
         [data-testid="stTextArea"] textarea {
             background: #ffffff;
-            border-radius: 10px;
-            border-color: #cad7df;
+            border-radius: 12px;
+            border-color: #aebfc9;
+            color: var(--ae-ink);
+        }
+
+        [data-testid="stTextInput"] input::placeholder,
+        [data-testid="stTextArea"] textarea::placeholder {
+            color: #667085;
+            opacity: 1;
+        }
+
+        [data-testid="stTextInput"] input:focus,
+        [data-testid="stTextArea"] textarea:focus {
+            border-color: var(--ae-accent);
+            box-shadow: 0 0 0 2px rgba(126, 45, 63, 0.12);
+        }
+
+        .ae-action-kicker {
+            color: var(--ae-accent);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+        }
+
+        .ae-action-title {
+            color: var(--ae-ink);
+            font-size: 1.35rem;
+            font-weight: 750;
+            margin: 0;
+        }
+
+        .ae-action-copy {
+            color: #45606f;
+            font-size: 0.95rem;
+            margin: 0.35rem 0 1rem;
         }
 
         .ae-score-card {
-            border: 1px solid;
+            background: #ffffff;
+            border: 1px solid var(--ae-border);
+            border-left: 5px solid #8392a0;
             border-radius: 16px;
             min-height: 132px;
             padding: 1rem 1.05rem;
         }
 
         .ae-score-card.featured {
+            background: #ffffff;
+            border-color: #b9c8d4;
+            border-left-color: var(--ae-petrol);
+            border-top: 4px solid var(--ae-petrol);
             min-height: 138px;
             padding: 1.05rem 1.15rem;
         }
 
         .ae-score-card.high {
-            background: #edf7f1;
-            border-color: #b9ddc8;
+            background: #ffffff;
+            border-color: var(--ae-border);
+            border-left-color: var(--ae-success);
         }
 
         .ae-score-card.medium {
-            background: #fff7e7;
-            border-color: #ead29d;
+            background: #ffffff;
+            border-color: var(--ae-border);
+            border-left-color: var(--ae-warning);
         }
 
         .ae-score-card.low {
-            background: #fff0f1;
-            border-color: #e8bdc1;
+            background: #ffffff;
+            border-color: var(--ae-border);
+            border-left-color: var(--ae-risk);
         }
 
         .ae-score-card .ae-score-label {
@@ -251,14 +347,17 @@ st.markdown(
         }
 
         .ae-feedback-card {
-            border: 1px solid;
+            background: #ffffff;
+            border: 1px solid var(--ae-border);
+            border-left: 5px solid #8392a0;
             border-radius: 14px;
             margin: 0.8rem 0;
             padding: 1rem 1.1rem 0.85rem;
         }
 
         .ae-feedback-card h3 {
-            font-size: 1rem;
+            color: var(--ae-ink);
+            font-size: 1.04rem;
             margin: 0 0 0.55rem;
         }
 
@@ -268,35 +367,39 @@ st.markdown(
         }
 
         .ae-feedback-card.strength {
-            background: #eff8f3;
-            border-color: #c3e2cf;
+            background: #ffffff;
+            border-color: var(--ae-border);
+            border-left-color: var(--ae-success);
         }
 
         .ae-feedback-card.improvement {
-            background: #fff8e9;
-            border-color: #ead7a8;
+            background: #ffffff;
+            border-color: var(--ae-border);
+            border-left-color: var(--ae-warning);
         }
 
         .ae-feedback-card.priority {
-            background: #f7eef1;
-            border-color: #d8b7c0;
+            background: #fffafb;
+            border-color: #e1c2ca;
             border-left: 5px solid var(--ae-accent);
         }
 
         .ae-feedback-card.summary {
-            background: #f1f6f8;
-            border-color: #d3e2e7;
+            background: #ffffff;
+            border-color: var(--ae-border);
+            border-left-color: var(--ae-petrol);
         }
 
         .ae-feedback-card.integrity {
-            background: #fff4ed;
-            border-color: #e8c9b3;
+            background: #ffffff;
+            border-color: #e3c8cc;
+            border-left-color: var(--ae-risk);
         }
 
         .ae-footer {
             border-top: 1px solid var(--ae-border);
-            color: var(--ae-muted);
-            font-size: 0.78rem;
+            color: #5b6573;
+            font-size: 0.82rem;
             margin-top: 2.5rem;
             padding-top: 1rem;
             text-align: center;
@@ -372,12 +475,12 @@ st.markdown(
         <div>
             <div class="ae-eyebrow">UCEMA · Programación de y con Agentes de IA</div>
             <h1>Agente Evaluador</h1>
-            <p>Evaluación trazable y reproducible de trabajos finales.</p>
+            <p>Evaluación objetiva, trazable y reproducible de trabajos finales.</p>
         </div>
         <div class="ae-statuses" aria-label="Estado del sistema">
             <span class="ae-badge">Motor determinístico</span>
             <span class="ae-badge">0 tokens generativos</span>
-            <span class="ae-badge">USD 0 API</span>
+            <span class="ae-badge">USD 0 API generativa</span>
         </div>
     </section>
     """,
@@ -471,15 +574,27 @@ with tab_single:
     st.markdown('<div class="ae-section-label">Evaluación individual</div>', unsafe_allow_html=True)
     st.caption("Ingresá una URL pública de GitHub para obtener una evaluación trazable a su revisión exacta.")
 
-    # Campo principal para ingresar la URL del repositorio objetivo
-    repo_url = st.text_input(
-        "URL pública del repositorio objetivo en GitHub",
-        placeholder="https://github.com/propietario/trabajo-final",
-        help="Ingresa la URL del repositorio individual o subcarpeta (/tree/branch/subpath) a evaluar",
-        key="input_single_url"
-    )
+    with st.container(border=True):
+        st.markdown('<div class="ae-action-kicker">Punto de partida</div>', unsafe_allow_html=True)
+        st.markdown('<p class="ae-action-title">Evaluá un repositorio</p>', unsafe_allow_html=True)
+        st.markdown(
+            '<p class="ae-action-copy">Pegá la URL pública de GitHub. El resultado queda trazado a la revisión evaluada.</p>',
+            unsafe_allow_html=True,
+        )
+        repo_url = st.text_input(
+            "URL pública del repositorio objetivo en GitHub",
+            placeholder="https://github.com/propietario/trabajo-final",
+            help="Ingresa la URL del repositorio individual o subcarpeta (/tree/branch/subpath) a evaluar",
+            key="input_single_url"
+        )
+        evaluate_requested = st.button(
+            "🚀 Evaluar repositorio",
+            type="primary",
+            use_container_width=True,
+            key="btn_single_eval",
+        )
 
-    if st.button("🚀 Evaluar Repositorio", type="primary", use_container_width=True, key="btn_single_eval"):
+    if evaluate_requested:
         if not repo_url.strip():
             st.error("Por favor, ingresa una URL válida de GitHub.")
         else:
