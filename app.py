@@ -22,14 +22,15 @@ st.markdown(
     """
     <style>
         :root {
-            --ae-ink: #1b2430;
-            --ae-muted: #526273;
-            --ae-border: #cfd8e1;
+            --ae-ink: #0f172a;
+            --ae-muted: #334155;
+            --ae-muted-strong: #475569;
+            --ae-border: #cbd5e1;
             --ae-surface: #ffffff;
-            --ae-soft: #e8eef3;
-            --ae-accent: #9e1b32;
-            --ae-petrol: #17324d;
-            --ae-sidebar: #14263a;
+            --ae-soft: #e6ecf2;
+            --ae-accent: #9f1239;
+            --ae-petrol: #102a43;
+            --ae-sidebar: #102a43;
             --ae-success: #2f6f55;
             --ae-warning: #966b22;
             --ae-risk: #a3434f;
@@ -74,7 +75,7 @@ st.markdown(
         }
 
         [data-testid="stAppViewContainer"] [data-testid="stCaptionContainer"] {
-            color: var(--ae-muted) !important;
+            color: var(--ae-muted-strong) !important;
             font-size: 0.86rem;
             line-height: 1.45;
         }
@@ -93,7 +94,7 @@ st.markdown(
         .ae-hero {
             align-items: center;
             background: var(--ae-petrol);
-            border: 1px solid #102b43;
+            border: 1px solid #0b2238;
             border-left: 6px solid var(--ae-accent);
             border-radius: 22px;
             box-shadow: 0 14px 30px rgba(23, 50, 77, 0.18);
@@ -162,7 +163,7 @@ st.markdown(
         }
 
         [data-testid="stMetricLabel"] {
-            color: var(--ae-muted);
+            color: var(--ae-muted-strong);
             font-size: 0.78rem;
             font-weight: 650;
             white-space: normal;
@@ -173,9 +174,10 @@ st.markdown(
         }
 
         [data-testid="stTabs"] button {
-            background: transparent;
+            background: #f7f9fb;
+            border: 1px solid transparent;
             border-radius: 8px 8px 0 0;
-            color: #3f4f5f;
+            color: var(--ae-muted) !important;
             font-size: 0.95rem;
             font-weight: 700;
             padding: 0.7rem 1rem;
@@ -183,13 +185,14 @@ st.markdown(
 
         [data-testid="stTabs"] button[aria-selected="true"] {
             background: #ffffff;
-            color: var(--ae-accent);
+            border-color: var(--ae-border);
+            color: var(--ae-ink) !important;
             box-shadow: inset 0 -3px 0 var(--ae-accent);
         }
 
         [data-testid="stTabs"] button:hover {
-            background: #dde5ec;
-            color: var(--ae-petrol);
+            background: #e2e8f0;
+            color: var(--ae-petrol) !important;
         }
 
         [data-testid="stTabs"] button:focus-visible {
@@ -220,6 +223,11 @@ st.markdown(
             color: var(--ae-petrol) !important;
         }
 
+        [data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
+        [data-testid="stExpander"] [data-testid="stMarkdownContainer"] li {
+            color: var(--ae-muted) !important;
+        }
+
         div[data-testid="stVerticalBlockBorderWrapper"] {
             background: #ffffff;
             border-color: #cfdae1;
@@ -234,6 +242,10 @@ st.markdown(
         [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p,
         [data-testid="stAlert"] [data-testid="stMarkdownContainer"] li {
             color: var(--ae-ink);
+        }
+
+        [data-testid="stAlert"] [data-testid="stCaptionContainer"] {
+            color: var(--ae-muted-strong) !important;
         }
 
         [data-testid="stDataFrame"] {
@@ -272,13 +284,13 @@ st.markdown(
         [data-testid="stTextArea"] textarea {
             background: #ffffff;
             border-radius: 12px;
-            border-color: #aebfc9;
+            border-color: #94a3b8;
             color: var(--ae-ink);
         }
 
         [data-testid="stTextInput"] input::placeholder,
         [data-testid="stTextArea"] textarea::placeholder {
-            color: #667085;
+            color: var(--ae-muted-strong);
             opacity: 1;
         }
 
@@ -305,7 +317,7 @@ st.markdown(
         }
 
         .ae-action-copy {
-            color: #45606f;
+            color: var(--ae-muted);
             font-size: 0.95rem;
             margin: 0.35rem 0 1rem;
         }
@@ -432,7 +444,7 @@ st.markdown(
 
         .ae-footer {
             border-top: 1px solid var(--ae-border);
-            color: #46586a;
+            color: var(--ae-muted-strong);
             font-size: 0.82rem;
             margin-top: 2.5rem;
             padding-top: 1rem;
