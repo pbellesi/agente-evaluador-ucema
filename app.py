@@ -7,7 +7,7 @@ from html import escape
 from datetime import datetime
 import streamlit as st
 from src import evidence_extractor
-from src.evaluator_engine import evaluate_with_rate_limit_guard, run_evaluation
+from src.evaluator_engine import evaluate_with_rate_limit_guard, run_evaluation, run_zip_evaluation
 from src.schema import EvaluationResult
 from src.ui_feedback import clean_text, format_aspect_description, generate_student_feedback
 
@@ -395,6 +395,91 @@ def _display_text(text):
     return escape(clean_text(str(text or "")).replace("**", "")).replace("\n", "<br>")
 
 
+def _render_evaluation_result(result, technical_mode, evaluation_diagnostics):
+    """Presenta un EvaluationResult sin distinguir su fuente de entrada."""
+    st.divider()
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        st.subheader(f"📌 Repositorio: `{result.repository}`")
+        st.caption(f"Revisión evaluada: `{result.evaluated_revision}` | Fecha: `{result.evaluation_date}`")
+        retrieval = (evaluation_diagnostics or {}).get("retrieval", {})
+        if retrieval.get("source") == "ZIP":
+            st.caption(
+                f"Origen: ZIP | Archivo: `{retrieval.get('source_filename', result.repository)}` | "
+                f"Huella SHA-256: `{result.evaluated_revision}`"
+            )
+    with col2:
+        status_color = "green" if result.evaluation_status == "completed" else "red"
+        st.markdown(f"**Estado:** :{status_color}[{result.evaluation_status.upper()}]")
+    with col3:
+        if result.final_score is not None:
+            _render_score_card("Nota final", "Resultado global", f"{result.final_score:.2f}", "sobre 100 puntos", result.final_score, featured=True)
+        else:
+            _render_score_card("Nota final", "Resultado global", "N/A", "sin puntaje disponible", 0, featured=True)
+
+    if technical_mode:
+        with st.expander("🔍 Diagnóstico de la corrida", expanded=False):
+            st.json(evaluation_diagnostics or {"status": "No disponible: la evaluación no produjo datos de diagnóstico."})
+
+    st.subheader("📊 Resultado por dimensiones")
+    st.caption("Lectura compacta de las cinco dimensiones oficiales de la rúbrica.")
+    if result.dimensions:
+        d_cols = st.columns(len(result.dimensions))
+        for idx, dim in enumerate(result.dimensions):
+            with d_cols[idx]:
+                _render_score_card(f"D{idx + 1}", dim.dimension, f"{dim.level_percent or 0}%", f"{dim.score:.2f} puntos" if dim.score is not None else "0.00 puntos", dim.level_percent)
+
+    feedback = generate_student_feedback(result)
+    st.divider()
+    st.subheader("🎓 Devolución para el trabajo evaluado")
+    _render_feedback_card("Devolución al alumno", "summary", f"<p>{_display_text(feedback['resumen_general'])}</p>")
+
+    if feedback["fortalezas"]:
+        strength_items = [f"<strong>{escape(f['dimension'])}</strong> ({f['level_percent']}%): {_display_text(f['text'])}" for f in feedback["fortalezas"]]
+        _render_feedback_card("✅ Fortalezas", "strength", _feedback_list(strength_items))
+    if feedback["avances_parciales"]:
+        partial_items = [f"<strong>{escape(a['dimension'])}</strong> ({a['level_percent']}%): {_display_text(a['text'])}" for a in feedback["avances_parciales"]]
+        _render_feedback_card("📈 Avances parciales", "summary", _feedback_list(partial_items))
+    if feedback["aspectos_a_mejorar"]:
+        improvement_items = [f"<strong>{escape(m['dimension'])}</strong> (nivel actual: {m['level_percent']}%): {_display_text(m['text'])}" for m in feedback["aspectos_a_mejorar"]]
+        _render_feedback_card("⚠ Aspectos a mejorar", "improvement", _feedback_list(improvement_items))
+    if feedback["recomendacion_prioritaria"]:
+        _render_feedback_card("🎯 Prioridad principal", "priority", f"<p>{_display_text(feedback['recomendacion_prioritaria'])}</p>")
+    if feedback["tiene_contradicciones"]:
+        integrity_items = [_display_text(note) for note in feedback["contradicciones"]]
+        _render_feedback_card(
+            "🔎 Evidencia que requiere revisión",
+            "integrity",
+            "<p>Se identificaron inconsistencias objetivas entre los artefactos documentados y la implementación ejecutable.</p>" + _feedback_list(integrity_items),
+        )
+
+    st.divider()
+    with st.expander("📚 Evidencia y justificación por dimensión", expanded=False):
+        if not result.dimensions:
+            st.error("No se obtuvieron dimensiones evaluadas debido a un error de acceso.")
+        else:
+            for dim in result.dimensions:
+                st.markdown(f"### **{dim.dimension}** — Puntaje: `{dim.score if dim.score is not None else 0}` / {dim.weight} pts (Nivel {dim.level_percent if dim.level_percent is not None else 0}%)")
+                d_col1, d_col2 = st.columns([1, 2])
+                with d_col1:
+                    st.markdown(f"**Peso:** {dim.weight} pts")
+                    st.markdown(f"**Nivel asignado:** {dim.level_percent}%")
+                    st.markdown(f"**Puntaje parcial:** {dim.score} pts")
+                with d_col2:
+                    st.markdown("**Justificación:**")
+                    st.write(dim.justification)
+                    if dim.missing_for_next_level:
+                        st.markdown("**Faltante para el siguiente nivel:**")
+                        st.caption(dim.missing_for_next_level)
+                st.markdown("**Evidencia citada:**")
+                if dim.evidence:
+                    for ev in dim.evidence:
+                        st.markdown(f"- `{ev}`")
+                else:
+                    st.write("_Sin evidencia citada_")
+                st.divider()
+
+
 st.markdown(
     """
     <section class="ae-hero">
@@ -504,7 +589,7 @@ with st.sidebar:
 
 evaluation_mode = st.radio(
     "Modo de evaluación",
-    ["📌 Evaluación Individual", "📋 Evaluación por Lote"],
+    ["📌 Evaluación Individual", "📋 Evaluación por Lote", "📦 Proyecto ZIP"],
     horizontal=True,
     label_visibility="collapsed",
     key="evaluation_mode",
@@ -554,144 +639,48 @@ if evaluation_mode == "📌 Evaluación Individual":
                 else:
                     status.update(label="❌ Error durante la evaluación", state="error", expanded=True)
 
-            st.divider()
+            _render_evaluation_result(result, technical_mode, evaluation_diagnostics)
 
-            # A. Repositorio + revisión SHA y B. Nota Final
-            col1, col2, col3 = st.columns([2, 1, 1])
-            with col1:
-                st.subheader(f"📌 Repositorio: `{result.repository}`")
-                st.caption(f"Revisión evaluada: `{result.evaluated_revision}` | Fecha: `{result.evaluation_date}`")
-            with col2:
-                status_color = "green" if result.evaluation_status == "completed" else "red"
-                st.markdown(f"**Estado:** :{status_color}[{result.evaluation_status.upper()}]")
-            with col3:
-                if result.final_score is not None:
-                    _render_score_card(
-                        "Nota final",
-                        "Resultado global",
-                        f"{result.final_score:.2f}",
-                        "sobre 100 puntos",
-                        result.final_score,
-                        featured=True,
-                    )
-                else:
-                    _render_score_card(
-                        "Nota final",
-                        "Resultado global",
-                        "N/A",
-                        "sin puntaje disponible",
-                        0,
-                        featured=True,
-                    )
+elif evaluation_mode == "📦 Proyecto ZIP":
+    st.markdown('<div class="ae-section-label">Evaluación de archivo ZIP</div>', unsafe_allow_html=True)
+    st.caption("Cargá un proyecto ZIP. Se inspecciona como evidencia sin ejecutar su contenido.")
+    with st.container(border=True):
+        uploaded_zip = st.file_uploader(
+            "Archivo ZIP del proyecto",
+            type=["zip"],
+            accept_multiple_files=False,
+            key="input_zip_project",
+        )
+        if uploaded_zip is not None:
+            st.caption(f"Archivo: `{uploaded_zip.name}` | Tamaño: {uploaded_zip.size:,} bytes")
+        evaluate_zip_requested = st.button(
+            "📦 Evaluar proyecto ZIP",
+            type="primary",
+            use_container_width=True,
+            key="btn_zip_eval",
+        )
 
-            if technical_mode:
-                with st.expander("🔍 Diagnóstico de la corrida", expanded=False):
-                    st.json(
-                        evaluation_diagnostics
-                        or {"status": "No disponible: la evaluación no produjo datos de diagnóstico."}
-                    )
-
-            # C. Resumen visual D1-D5
-            st.subheader("📊 Resultado por dimensiones")
-            st.caption("Lectura compacta de las cinco dimensiones oficiales de la rúbrica.")
-            if result.dimensions:
-                d_cols = st.columns(len(result.dimensions))
-                for idx, dim in enumerate(result.dimensions):
-                    with d_cols[idx]:
-                        _render_score_card(
-                            f"D{idx + 1}",
-                            dim.dimension,
-                            f"{dim.level_percent or 0}%",
-                            f"{dim.score:.2f} puntos" if dim.score is not None else "0.00 puntos",
-                            dim.level_percent,
-                        )
-
-            # D & E. Devolución al alumno evaluado y Contradicciones
-            feedback = generate_student_feedback(result)
-
-            st.divider()
-            st.subheader("🎓 Devolución para el trabajo evaluado")
-
-            _render_feedback_card(
-                "Devolución al alumno",
-                "summary",
-                f"<p>{_display_text(feedback['resumen_general'])}</p>",
-            )
-
-            if feedback["fortalezas"]:
-                strength_items = [
-                    (
-                        f"<strong>{escape(f['dimension'])}</strong> "
-                        f"({f['level_percent']}%): {_display_text(f['text'])}"
-                    )
-                    for f in feedback["fortalezas"]
-                ]
-                _render_feedback_card("✅ Fortalezas", "strength", _feedback_list(strength_items))
-
-            if feedback["avances_parciales"]:
-                partial_items = [
-                    (
-                        f"<strong>{escape(a['dimension'])}</strong> "
-                        f"({a['level_percent']}%): {_display_text(a['text'])}"
-                    )
-                    for a in feedback["avances_parciales"]
-                ]
-                _render_feedback_card("📈 Avances parciales", "summary", _feedback_list(partial_items))
-
-            if feedback["aspectos_a_mejorar"]:
-                improvement_items = [
-                    (
-                        f"<strong>{escape(m['dimension'])}</strong> "
-                        f"(nivel actual: {m['level_percent']}%): {_display_text(m['text'])}"
-                    )
-                    for m in feedback["aspectos_a_mejorar"]
-                ]
-                _render_feedback_card("⚠ Aspectos a mejorar", "improvement", _feedback_list(improvement_items))
-
-            if feedback["recomendacion_prioritaria"]:
-                _render_feedback_card(
-                    "🎯 Prioridad principal",
-                    "priority",
-                    f"<p>{_display_text(feedback['recomendacion_prioritaria'])}</p>",
+    if evaluate_zip_requested:
+        if uploaded_zip is None:
+            st.error("Seleccioná un archivo .zip antes de evaluar.")
+        else:
+            evaluation_diagnostics = {
+                "retrieval": {"source": "ZIP", "source_filename": uploaded_zip.name},
+            }
+            with st.status("Evaluando archivo ZIP...", expanded=True) as status:
+                st.write("🛡️ Validando estructura y seguridad del ZIP sin ejecutar contenido...")
+                st.write("📜 Extrayendo evidencia objetiva y aplicando gates determinísticos...")
+                result = run_zip_evaluation(
+                    uploaded_zip.getvalue(),
+                    uploaded_zip.name,
+                    status_callback=lambda msg: st.write(f"⏳ {msg}"),
+                    diagnostics_callback=lambda data: evaluation_diagnostics.update(data),
                 )
-
-            if feedback["tiene_contradicciones"]:
-                integrity_items = [_display_text(note) for note in feedback["contradicciones"]]
-                _render_feedback_card(
-                    "🔎 Evidencia que requiere revisión",
-                    "integrity",
-                    "<p>Se identificaron inconsistencias objetivas entre los artefactos documentados y la implementación ejecutable.</p>"
-                    + _feedback_list(integrity_items),
-                )
-
-            st.divider()
-
-            # F. Expander: Ver desglose técnico completo
-            with st.expander("📚 Evidencia y justificación por dimensión", expanded=False):
-                if not result.dimensions:
-                    st.error("No se obtuvieron dimensiones evaluadas debido a un error de acceso.")
+                if result.evaluation_status == "completed":
+                    status.update(label="✅ Evaluación completada con éxito", state="complete", expanded=False)
                 else:
-                    for dim in result.dimensions:
-                        st.markdown(f"### **{dim.dimension}** — Puntaje: `{dim.score if dim.score is not None else 0}` / {dim.weight} pts (Nivel {dim.level_percent if dim.level_percent is not None else 0}%)")
-                        d_col1, d_col2 = st.columns([1, 2])
-                        with d_col1:
-                            st.markdown(f"**Peso:** {dim.weight} pts")
-                            st.markdown(f"**Nivel asignado:** {dim.level_percent}%")
-                            st.markdown(f"**Puntaje parcial:** {dim.score} pts")
-                        with d_col2:
-                            st.markdown("**Justificación:**")
-                            st.write(dim.justification)
-                            if dim.missing_for_next_level:
-                                st.markdown("**Faltante para el siguiente nivel:**")
-                                st.caption(dim.missing_for_next_level)
-
-                        st.markdown("**Evidencia citada:**")
-                        if dim.evidence:
-                            for ev in dim.evidence:
-                                st.markdown(f"- `{ev}`")
-                        else:
-                            st.write("_Sin evidencia citada_")
-                        st.divider()
+                    status.update(label="❌ Error durante la evaluación", state="error", expanded=True)
+            _render_evaluation_result(result, technical_mode, evaluation_diagnostics)
 
 else:
     st.markdown('<div class="ae-section-label">Evaluación por lote</div>', unsafe_allow_html=True)
