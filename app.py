@@ -7,7 +7,7 @@ from html import escape
 from datetime import datetime
 import streamlit as st
 from src import evidence_extractor
-from src.evaluator_engine import run_evaluation
+from src.evaluator_engine import evaluate_with_rate_limit_guard, run_evaluation
 from src.schema import EvaluationResult
 from src.ui_feedback import clean_text, format_aspect_description, generate_student_feedback
 
@@ -827,6 +827,7 @@ with tab_batch:
             batch_results = []
             completed_count = 0
             error_count = 0
+            primary_rate_limit_active = False
 
             start_time = time.time()
             total_urls = len(valid_urls)
@@ -834,7 +835,10 @@ with tab_batch:
             for idx, url in enumerate(valid_urls, start=1):
                 status_text.write(f"⏳ ({idx}/{total_urls}) Evaluando `{url}`...")
                 try:
-                    res = run_evaluation(url)
+                    res, primary_rate_limit_active = evaluate_with_rate_limit_guard(
+                        url,
+                        primary_rate_limit_active,
+                    )
                 except Exception as e:
                     res = EvaluationResult(
                         repository=url,

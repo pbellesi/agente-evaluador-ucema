@@ -1,4 +1,5 @@
 import io
+import os
 import sys
 import types
 import unittest
@@ -14,16 +15,22 @@ if "requests" not in sys.modules:
     )
     sys.modules["requests"] = requests_stub
 
-from src.evaluator_engine import run_evaluation
-from src.github_fetcher import fetch_repository_data, parse_github_url
+from src.evaluator_engine import (
+    PRIMARY_RATE_LIMIT_MARKER,
+    evaluate_with_rate_limit_guard,
+    rate_limit_access_error_result,
+    run_evaluation,
+)
+from src.github_fetcher import _github_headers, classify_github_error, fetch_repository_data, parse_github_url
 from src.schema import EvaluationResult
 
 
 class FakeResponse:
-    def __init__(self, status_code, payload=None, content=b""):
+    def __init__(self, status_code, payload=None, content=b"", headers=None):
         self.status_code = status_code
         self._payload = payload or {}
         self.content = content
+        self.headers = headers or {}
 
     def json(self):
         return self._payload
@@ -41,10 +48,12 @@ class FakeGitHub:
         self.default_branch = default_branch
         self.references = references
         self.calls = []
+        self.request_headers = []
         self.archive = archive_bytes()
 
-    def get(self, url, timeout):
+    def get(self, url, timeout, headers=None):
         self.calls.append(url)
+        self.request_headers.append(headers or {})
         base = "https://api.github.com/repos/acme/demo"
         if url == base:
             return FakeResponse(200, {"default_branch": self.default_branch})
@@ -142,6 +151,77 @@ class GitHubReferenceResolutionTests(unittest.TestCase):
             succeeded = run_evaluation("https://github.com/acme/ok")
         self.assertEqual(failed.evaluation_status, "access_error")
         self.assertEqual(succeeded.evaluation_status, "completed")
+
+
+class GitHubHttpClientTests(unittest.TestCase):
+    def test_anonymous_request_has_user_agent_without_authorization(self):
+        github = FakeGitHub("main", {"main": "a" * 40})
+        with patch("src.github_fetcher._github_token", return_value=None), patch(
+            "src.github_fetcher.requests.get", side_effect=github.get
+        ):
+            fetch_repository_data("https://github.com/acme/demo")
+        self.assertTrue(all(headers["User-Agent"] == "agente-evaluador-ucema" for headers in github.request_headers))
+        self.assertTrue(all("Authorization" not in headers for headers in github.request_headers))
+
+    def test_token_adds_bearer_authorization_header(self):
+        github = FakeGitHub("main", {"main": "a" * 40})
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "test-token"}), patch(
+            "src.github_fetcher.requests.get", side_effect=github.get
+        ):
+            fetch_repository_data("https://github.com/acme/demo")
+        self.assertTrue(all(headers.get("Authorization") == "Bearer test-token" for headers in github.request_headers))
+
+    def test_streamlit_secret_is_used_when_environment_token_is_absent(self):
+        fake_streamlit = types.SimpleNamespace(secrets={"GITHUB_TOKEN": "secret-from-streamlit"})
+        with patch.dict(os.environ, {"GITHUB_TOKEN": ""}), patch.dict(
+            sys.modules, {"streamlit": fake_streamlit}
+        ):
+            headers = _github_headers()
+        self.assertEqual(headers.get("Authorization"), "Bearer secret-from-streamlit")
+
+    def test_token_never_appears_in_access_error(self):
+        token = "secret-token-never-visible"
+        response = FakeResponse(
+            403,
+            {"message": "API rate limit exceeded"},
+            headers={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1788705053"},
+        )
+        with patch.dict(os.environ, {"GITHUB_TOKEN": token}), patch(
+            "src.github_fetcher.requests.get", return_value=response
+        ):
+            result = run_evaluation("https://github.com/acme/demo")
+        self.assertEqual(result.evaluation_status, "access_error")
+        self.assertNotIn(token, result.concrete_improvement)
+        self.assertNotIn(token, " ".join(result.integrity_notes))
+
+    def test_primary_rate_limit_is_classified_from_remaining_zero(self):
+        details = classify_github_error(FakeResponse(403, headers={"X-RateLimit-Remaining": "0"}))
+        self.assertEqual(details["category"], "PRIMARY_RATE_LIMIT")
+
+    def test_secondary_rate_limit_is_classified_from_retry_after_or_message(self):
+        retry_details = classify_github_error(FakeResponse(429, headers={"Retry-After": "30"}))
+        message_details = classify_github_error(
+            FakeResponse(403, {"message": "You have exceeded a secondary rate limit."})
+        )
+        self.assertEqual(retry_details["category"], "SECONDARY_RATE_LIMIT")
+        self.assertEqual(message_details["category"], "SECONDARY_RATE_LIMIT")
+
+    def test_forbidden_and_not_found_are_classified_without_rate_limit_signals(self):
+        forbidden = classify_github_error(FakeResponse(403, {"message": "Resource not accessible"}))
+        missing = classify_github_error(FakeResponse(404, {"message": "Not Found"}))
+        self.assertEqual(forbidden["category"], "FORBIDDEN_OTHER")
+        self.assertEqual(missing["category"], "NOT_FOUND")
+
+    def test_batch_guard_stops_evaluations_after_primary_rate_limit(self):
+        primary = rate_limit_access_error_result("https://github.com/acme/limited")
+        with patch("src.evaluator_engine.run_evaluation", return_value=primary) as runner:
+            first, blocked = evaluate_with_rate_limit_guard("https://github.com/acme/limited", False)
+            second, still_blocked = evaluate_with_rate_limit_guard("https://github.com/acme/not-requested", blocked)
+        self.assertTrue(blocked)
+        self.assertTrue(still_blocked)
+        self.assertEqual(runner.call_count, 1)
+        self.assertEqual(first.evaluation_status, "access_error")
+        self.assertTrue(second.integrity_notes[0].startswith(PRIMARY_RATE_LIMIT_MARKER))
 
 
 class ParseGitHubUrlTests(unittest.TestCase):
