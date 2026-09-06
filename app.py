@@ -84,6 +84,34 @@ st.markdown(
             color: #cdd9e3 !important;
         }
 
+        .ae-sidebar-control-title {
+            color: #f1f5f9;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-top: 0.9rem;
+        }
+
+        .ae-sidebar-team-card {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            color: #f1f5f9;
+            margin: 0.9rem 0;
+            padding: 0.9rem 1rem;
+        }
+
+        .ae-sidebar-team-card h4 {
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            margin: 0 0 0.55rem;
+        }
+
+        .ae-sidebar-team-card ul {
+            color: #d9e2ea;
+            margin: 0;
+            padding-left: 1.1rem;
+        }
+
         [data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"] p,
         [data-testid="stAppViewContainer"] label[data-testid="stWidgetLabel"] p {
             color: var(--ae-ink) !important;
@@ -173,35 +201,28 @@ st.markdown(
             color: var(--ae-ink);
         }
 
-        [data-testid="stTabs"] button {
-            background: #f7f9fb;
-            border: 1px solid transparent;
-            border-radius: 8px 8px 0 0;
-            color: var(--ae-muted) !important;
-            font-size: 0.95rem;
-            font-weight: 700;
-            padding: 0.7rem 1rem;
+        [data-testid="stRadio"] [role="radiogroup"] {
+            gap: 0.65rem;
         }
 
-        [data-testid="stTabs"] button[aria-selected="true"] {
+        [data-testid="stRadio"] label {
             background: #ffffff;
-            border-color: var(--ae-border);
+            border: 1px solid var(--ae-border);
+            border-radius: 10px;
             color: var(--ae-ink) !important;
+            font-weight: 700;
+            margin: 0;
+            padding: 0.55rem 0.8rem;
+        }
+
+        [data-testid="stRadio"] label:has(input:checked) {
+            border-color: var(--ae-accent);
             box-shadow: inset 0 -3px 0 var(--ae-accent);
+            color: var(--ae-accent) !important;
         }
 
-        [data-testid="stTabs"] button:hover {
-            background: #e2e8f0;
-            color: var(--ae-petrol) !important;
-        }
-
-        [data-testid="stTabs"] button:focus-visible {
-            outline: 2px solid var(--ae-accent);
-            outline-offset: -2px;
-        }
-
-        [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
-            background-color: var(--ae-accent);
+        [data-testid="stRadio"] input {
+            accent-color: var(--ae-accent);
         }
 
         [data-testid="stExpander"] {
@@ -545,7 +566,7 @@ with st.sidebar:
     st.markdown("### Modos de evaluación")
     st.caption("Individual: un repositorio. Lote: hasta 50 repositorios en una misma corrida.")
 
-    st.markdown("### Modo técnico")
+    st.markdown('<div class="ae-sidebar-control-title">Modo técnico</div>', unsafe_allow_html=True)
     st.caption("Opcional. No modifica la evaluación.")
 
     technical_mode = st.toggle(
@@ -553,6 +574,7 @@ with st.sidebar:
         value=False,
         help="Muestra diagnósticos de runtime y de corrida. No altera la evaluación.",
         key="technical_mode",
+        label_visibility="collapsed",
     )
 
     if technical_mode:
@@ -596,15 +618,22 @@ with st.sidebar:
 
     st.divider()
 
-    with st.expander("👥 Equipo · Agente Evaluador", expanded=False):
-        st.markdown("""
-        - Pablo Bellesi
-        - Diego Mendez
-        - Franco Gambini
-        - Sofia Mapelli
-        - Franco Forziati
-        - Melisa Clark
-        """)
+    st.markdown(
+        """
+        <section class="ae-sidebar-team-card">
+            <h4>👥 Equipo · Agente Evaluador</h4>
+            <ul>
+                <li>Pablo Bellesi</li>
+                <li>Diego Mendez</li>
+                <li>Franco Gambini</li>
+                <li>Sofia Mapelli</li>
+                <li>Franco Forziati</li>
+                <li>Melisa Clark</li>
+            </ul>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("### Principios")
     st.markdown("""
@@ -614,9 +643,15 @@ with st.sidebar:
     - Sin API generativa en runtime
     """)
 
-tab_single, tab_batch = st.tabs(["📌 Evaluación Individual", "📋 Evaluación por Lote"])
+evaluation_mode = st.radio(
+    "Modo de evaluación",
+    ["📌 Evaluación Individual", "📋 Evaluación por Lote"],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="evaluation_mode",
+)
 
-with tab_single:
+if evaluation_mode == "📌 Evaluación Individual":
     st.markdown('<div class="ae-section-label">Evaluación individual</div>', unsafe_allow_html=True)
     st.caption("Ingresá una URL pública de GitHub para obtener una evaluación trazable a su revisión exacta.")
 
@@ -799,7 +834,7 @@ with tab_single:
                             st.write("_Sin evidencia citada_")
                         st.divider()
 
-with tab_batch:
+else:
     st.markdown('<div class="ae-section-label">Evaluación por lote</div>', unsafe_allow_html=True)
     st.subheader("📋 Evaluación de repositorios")
     st.caption("Ingresá hasta 50 URLs públicas de GitHub, una por línea. Todas se evalúan con el mismo motor determinístico.")
