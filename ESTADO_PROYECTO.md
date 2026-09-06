@@ -2,18 +2,18 @@
 
 ## Fecha de actualización
 
-El motor integrado en `main` permanece congelado. La vía operativa del agente se encuentra en la rama `feat/system-prompt-agent`, validada end-to-end y pendiente de PR y merge.
+El motor integrado en `main` permanece congelado. La vía operativa del System Prompt está integrada en `main` mediante el PR #52, mergeado en `d39592ea76891a50f16f33c47bf65ac37eabea52`; fue validada end-to-end por ZIP y GitHub real.
 
 ## Fase actual
 
-Cierre de entrega: motor final integrado y congelado, con la vía operativa del System Prompt preparada para integrarse sin alterar Streamlit ni scoring.
+Cierre de entrega: motor final y System Prompt operativo integrados y congelados, sin alterar Streamlit ni scoring.
 
 ## Equipo y responsables
 
 | Rol | Responsable | Alcance principal |
 |---|---|---|
 | A | Pablo Bellesi | Coordinación e integración del avance |
-| B | Diego Mendez | Integración técnica; agente corrector v1 preservado y System Prompt operativo preparado |
+| B | Diego Mendez | Integración técnica; agente corrector v1 preservado y System Prompt operativo integrado |
 | C | Franco Gambini | Rúbrica ejecutable completada; disponible para consulta |
 | D | Sofia Mapelli | Casos excelente y flojo completados |
 | E | Franco Forziati | Caso adversarial / tramposo completado; disponible para consulta |
@@ -25,8 +25,8 @@ Cierre de entrega: motor final integrado y congelado, con la vía operativa del 
 - Rúbrica ejecutable V2 completa en `rubrica.md`; cinco niveles como convención del equipo.
 - Agente corrector v1 preservado en `agente/`, con contrato JSON y validación inicial contra Tramposo.
 - `agente/evaluate_tool.py` implementado y `agente/system_prompt.md` operacionalizado: un agente con workspace y terminal puede invocar el mismo `evaluator_engine`; Streamlit y scoring no cambiaron.
-- Validación de esta implementación: 115/115 pruebas verdes.
-- E2E ZIP: PASS sobre `casos/excelente` (88,75; D1–D5 100/100/100/25/100). E2E GitHub real: PASS sobre PULSO en SHA `0f0092a004169e6b64b0f0701eba3baf904cf7db` (85,0; D1–D5 100/100/75/75/50). Ambas pruebas retransmitieron un `EvaluationResult` semánticamente idéntico a la ejecución directa y no modificaron código ni scoring.
+- PR #52 mergeado en `main` (`d39592ea76891a50f16f33c47bf65ac37eabea52`): System Prompt operativo integrado sin cambios en Streamlit ni scoring.
+- Validación de esta implementación: 115/115 pruebas verdes. E2E ZIP: PASS sobre `casos/excelente` (88,75; D1–D5 100/100/100/25/100). E2E GitHub real: PASS sobre PULSO en SHA `0f0092a004169e6b64b0f0701eba3baf904cf7db` (85,0; D1–D5 100/100/75/75/50). Ambas pruebas retransmitieron un `EvaluationResult` semánticamente idéntico a la ejecución directa y no modificaron código ni scoring.
 - Runtime final determinístico integrado en `src/` y expuesto por `app.py`: no usa APIs generativas, registra la revisión SHA evaluada y trata el contenido objetivo como evidencia.
 - Los tres casos completos e integrados: excelente, flojo y tramposo.
 - Calibración humano/agente realizada y registrada en `calibracion.md`, con desacuerdos y limitaciones de trazabilidad explícitos.
@@ -49,11 +49,10 @@ Cierre de entrega: motor final integrado y congelado, con la vía operativa del 
 
 ## En curso
 
-- Integración de la vía operativa del System Prompt desde `feat/system-prompt-agent`; no altera el motor, scoring ni Streamlit.
+- Revisión de despliegue/documentación y preparación de defensa/entrega; la publicación en el campus no está acreditada por GitHub.
 
 ## Pendiente inmediato
 
-- PR y merge de `feat/system-prompt-agent`.
 - Revisión de despliegue/documentación y preparación de defensa/entrega; la publicación en el campus no está acreditada por GitHub.
 
 ## Bloqueos / inconsistencias conocidas
@@ -68,4 +67,4 @@ Entrega documentalmente consistente, con motor congelado, E2E del agente validad
 
 ## Próximo paso
 
-Crear PR y completar el merge de `feat/system-prompt-agent`.
+Completar la revisión de despliegue/documentación y preparar la defensa/entrega.
