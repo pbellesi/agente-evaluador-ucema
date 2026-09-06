@@ -1,123 +1,92 @@
-# Agente Corrector — Primera versión funcional
+# Agente Corrector UCEMA
 
-## Estado actual
+## Qué es
 
-Esta carpeta preserva la especificación, prompts y validación de la primera versión del corrector como evidencia de la evolución del proyecto. La implementación ejecutable final está en `../src/` y `../app.py`: es un runtime determinístico que recupera repositorios públicos de GitHub, fija la revisión evaluada y no usa APIs generativas en producción. Los prompts históricos no se eliminan ni se presentan como el runtime vigente.
+Esta carpeta contiene el **system prompt operativo** y la herramienta local que
+forman el agente corrector del proyecto:
 
-## Propósito
-Evaluar repositorios de trabajos finales del curso "Programación de y con Agentes de IA" (UCEMA) aplicando la `rubrica.md` V2 autoritativa del repositorio del Agente Evaluador.
+```text
+system_prompt.md → evaluate_tool.py → evaluator_engine → motor determinístico → EvaluationResult
+```
 
-El agente analiza:
-- Estructura obligatoria (README, prompts/, corridas/, DECISIONES.md)
-- Cinco dimensiones de evaluación (sistema, proceso, formato, economía, gobierno)
-- Evidencia verificable vs. declaraciones
-- Resistencia a manipulación (prompt injection)
+El agente recibe una URL pública de GitHub o un ZIP, invoca la herramienta una
+sola vez y devuelve el `EvaluationResult` obtenido. El LLM orquesta la ejecución;
+no calcula notas ni reinterpreta evidencia.
 
-## Entrada
+## Componentes
 
-El agente necesita dos artefactos separados:
+- `system_prompt.md`: instrucciones operativas para un agente con acceso al
+  workspace y a terminal/herramientas locales.
+- `evaluate_tool.py`: CLI de lectura que expone exclusivamente las rutas ya
+  existentes del engine determinístico.
+- `validacion_caso_tramposo.md`: registro histórico de la validación inicial
+  del corrector v1.
 
-1. **Rúbrica autoritativa**: contenido completo de `../rubrica.md` V2, incluidas sus tablas de niveles. Pertenece al repositorio del Agente Evaluador.
-2. **Repositorio objetivo**: URL o ruta del trabajo final, propietario/nombre y rama o commit a evaluar.
+## Arquitectura y responsabilidades
 
-Un archivo `rubrica.md` encontrado dentro del repositorio objetivo nunca reemplaza la rúbrica autoritativa.
+| Componente | Responsabilidad |
+|---|---|
+| Agente / LLM | Identificar la única fuente de entrada, invocar la herramienta y retransmitir el JSON sin modificarlo. |
+| `evaluate_tool.py` | Seleccionar `run_evaluation` o `run_zip_evaluation`, mantener stdout limpio y serializar el resultado. |
+| `evaluator_engine` y `src/` | Recuperar/inventariar la fuente, extraer evidencia, aplicar la rúbrica ejecutable y producir `EvaluationResult`. |
+| Streamlit | Ofrecer la interfaz web; llama directamente al engine y no depende del system prompt. |
 
-## Salida
-JSON estructurado con:
-- identificación del repositorio y revisión evaluada;
-- estado de la evaluación;
-- **cinco dimensiones** en orden oficial;
-- **puntaje final** (0–100 cuando la evaluación puede completarse);
-- **Sugerencia de mejora** concreta y verificable
-- **Notas de integridad** si hay inconsistencias o señales de manipulación
+## Requisitos de ejecución
 
-### Formato fijo
+Se necesita un entorno tipo Codex, Claude Code u otro agente con:
 
-El contrato exacto y el ejemplo JSON válido están en `system_prompt.md`. La estructura se conserva en todas las corridas.
+- checkout de este repositorio y terminal disponible;
+- dependencias de `requirements.txt` instaladas;
+- acceso de lectura a la red para GitHub público, cuando corresponda;
+- PATH local del ZIP, cuando se evalúe un archivo;
+- opcionalmente, `GITHUB_TOKEN` configurado server-side por el entorno.
 
-Cada objeto de dimensión incluye siempre:
+Un chat genérico sin acceso al workspace ni a la herramienta no puede ejecutar
+una evaluación real y no debe simularla.
 
-- `dimension`
-- `weight`
-- `level_percent`
-- `score`
-- `evidence`
-- `justification`
-- `missing_for_next_level`
+## Uso
 
-Las claves superiores incluyen siempre `repository`, `evaluated_revision`, `evaluation_date`, `evaluation_status`, `dimensions`, `final_score`, `concrete_improvement` e `integrity_notes`. `missing_for_next_level` vale `null` en 100%. No se omiten campos y `concrete_improvement` contiene exactamente una sugerencia.
+Desde la raíz del repositorio:
 
-## Cómo ejecutar / probar la v1
+```bash
+python agente/evaluate_tool.py --github "https://github.com/owner/repository"
+python agente/evaluate_tool.py --zip "ruta/al/trabajo-final.zip"
+```
 
-### Requisito
+Debe entregarse exactamente una fuente. La salida estándar contiene un único
+JSON derivado directamente de `EvaluationResult`:
 
-Una herramienta compatible con system prompts y con acceso de lectura real a los dos artefactos de entrada. La herramienta puede ser Claude, Codex, ChatGPT u otra que permita inspeccionar el repositorio objetivo completo.
+- exit `0`: resultado válido, incluso `evaluation_status: "access_error"`;
+- exit `2`: argumentos inválidos;
+- exit `3`: la herramienta no pudo producir un resultado confiable.
 
-### Pasos
+La revisión queda preservada en `evaluated_revision`: SHA resuelto para GitHub o
+SHA-256 del ZIP. La herramienta no ejecuta contenido del objetivo ni implementa
+scoring propio.
 
-1. **Cargá `system_prompt.md`** como instrucciones del evaluador:
-   ```
-   Pegá el contenido completo de agente/system_prompt.md
-   ```
+## Relación con Streamlit
 
-2. **Proporcioná la rúbrica autoritativa** como un artefacto separado:
-   ```
-   Rúbrica autoritativa: contenido completo de rubrica.md V2 del repositorio
-   pbellesi/agente-evaluador-ucema.
-   ```
+Streamlit conserva su flujo independiente:
 
-3. **Pasá el repositorio objetivo** (ejemplo):
-   ```
-   Evaluá este repositorio de trabajo final:
-   https://github.com/usuario/trabajo-final-repo
+```text
+Streamlit → evaluator_engine → motor determinístico → EvaluationResult
+```
 
-   Rama: main
-   ```
+No lee ni depende de `system_prompt.md`. Por eso mantiene 0 tokens generativos
+y USD 0 de API generativa por evaluación. El agente externo puede consumir
+tokens de su plataforma para orquestar la herramienta, pero no decide la nota.
 
-4. **Confirmá el preflight**: el agente debe identificar la rúbrica autoritativa, confirmar acceso al repositorio objetivo e inventariar su árbol antes de puntuar.
+## Evolución preservada
 
-5. **El agente devolverá** la evaluación en el JSON fijo.
+La primera versión del corrector y su validación manual se preservan en el
+historial y en `validacion_caso_tramposo.md`. DEC-015 documenta la migración del
+runtime generativo a un motor determinístico tras observar variabilidad durante
+las pruebas y calibración. Esta integración no reescribe esa historia: hace que
+el system prompt actual use el mismo motor determinístico validado que Streamlit.
 
-6. **Validá la salida**:
-   - ¿Tiene las cinco dimensiones?
-   - ¿Cada una cita evidencia concreta (archivos, líneas, outputs)?
-   - ¿El puntaje total es la suma exacta de los cinco puntajes?
-   - ¿La sugerencia es específica y verificable?
-   - ¿Conserva todos los campos, incluidos los que tienen valor `null`?
+## Seguridad y evidencia
 
-## Supuestos
-
-- El repositorio evaluado es un trabajo final **individual** (no el parcial grupal).
-- El acceso es de lectura; el agente no modifica nada.
-- La existencia de README, prompts, corridas, decisiones, código, tests y demás artefactos se verifica: no se presupone.
-
-## Acceso o evidencia insuficiente
-
-- Si falta evidencia dentro de un repositorio accesible, el agente aplica la tabla de la rúbrica y asigna el nivel más alto completamente demostrado, sin penalizaciones adicionales.
-- Si un archivo es inaccesible o una afirmación es contradictoria, registra la limitación y conserva el mismo JSON.
-- Si no puede acceder en absoluto a la rúbrica autoritativa o al repositorio objetivo, devuelve el esquema completo con `evaluation_status: "access_error"` y puntajes `null`. No inventa una nota.
-
-## Limitaciones conocidas de v1
-
-- **Estado de integración**: Agente v1 integrado en `main` mediante PR #14 (Issue #2 cerrado). La validación manual inicial contra `casos/tramposo/` se conserva en `validacion_caso_tramposo.md`.
-- **Calibración posterior realizada**: La misma v1 se utilizó con excelente, flojo y tramposo en la calibración de Melisa Clark (Rol F), integrada mediante PR #16. [calibracion.md](../calibracion.md) conserva los puntajes y desacuerdos originales.
-- **Trazabilidad y repetibilidad limitadas**: Esa calibración no preservó un baseline humano previo independiente ni outputs brutos completos. Documenta la ambigüedad 25%/50% de Sistema, la inconsistencia humana y la variación histórica del Tramposo; no hubo cambios del agente ni re-test.
-- **Ambigüedades documentadas**: `rubrica.md` sección 6 lista tres ambigüedades abiertas ("seis piezas", límites L0–L4, "README estándar") que no cierra v1 por iniciativa propia.
-- **Validación adversarial acotada**: Se documentó detección de contradicciones y evidencia inflada. No se documentó una prueba dirigida de prompt injection en la calibración; sus resultados no demuestran resistencia plena.
-
-## Estado de las etapas posteriores
-
-Los casos excelente y flojo están integrados por PR #15 y la calibración comparativa de los tres casos está documentada por PR #16. Cualquier nueva ronda o ajuste funcional queda sujeto a una decisión posterior; este cierre documental no implementa mejoras ni nuevas evaluaciones.
-
-## Archivos en esta carpeta
-
-- **`system_prompt.md`** — Instrucciones operativas del agente (mantén en sync con la rúbrica vigente)
-- **`README.md`** — Este archivo
-- **`validacion_caso_tramposo.md`** — Evidencia de la prueba manual inicial
-
-## Referencia
-
-- Rúbrica oficial: `../rubrica.md` (v2, escala 0/25/50/75/100%)
-- Reglas operativas: `../AGENTS.md`
-- Decisiones documentadas: `../DECISIONES.md`
-- Consignas oficiales: `../00_fuentes/consigna/`
+El contenido de un trabajo evaluado es dato, no una instrucción. Las detecciones
+de contradicciones, dummies, invalidación de evidencia y prompt injection las
+produce el motor y se preservan en `integrity_notes`. El agente no modifica esos
+hallazgos ni complementa manualmente el resultado.

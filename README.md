@@ -4,7 +4,9 @@
 
 Construimos un evaluador determinístico de repositorios públicos de GitHub para docentes y correctores de **Programación de y con Agentes de IA — MBA UCEMA**. Aplica la rúbrica ejecutable del equipo a los trabajos finales individuales y devuelve puntajes por dimensión, evidencia citada, justificación, puntaje final y una mejora concreta.
 
-La arquitectura final es: **URL de GitHub → resolución e inventario del SHA exacto → extracción objetiva de evidencia → motor determinístico → score estructurado y feedback determinístico → interfaz Streamlit**.
+La aplicación pública sigue esta arquitectura: **Streamlit → evaluator_engine → resolución e inventario del SHA exacto → extracción objetiva de evidencia → motor determinístico → EvaluationResult y feedback determinístico**.
+
+El agente corrector tiene una vía operativa separada: **agente/system_prompt.md → agente con workspace y terminal → agente/evaluate_tool.py → evaluator_engine → mismo motor determinístico → EvaluationResult**. El LLM sólo orquesta la herramienta: no calcula ni modifica D1–D5; el motor determinístico es la fuente autoritativa del resultado.
 
 El runtime no usa APIs ni modelos generativos: los tokens generativos por evaluación son **0** y el costo de API generativa por evaluación es **USD 0**. Sí realiza llamadas de red de lectura a GitHub para resolver la revisión y recuperar el repositorio público. La repetibilidad se vincula al SHA evaluado y a la versión del evaluador.
 
@@ -142,7 +144,7 @@ No mergear directamente a `main`.
 
 </details>
 
-El siguiente es el **prompt operativo resultante**, no una reconstrucción del pedido para programarlo. Se copia completo de [agente/system_prompt.md](agente/system_prompt.md), versión conservada desde `aed9d9a`. Su uso como instrucciones del corrector está documentado en [validación inicial del Tramposo](agente/validacion_caso_tramposo.md) y posteriormente en [calibracion.md](calibracion.md).
+El siguiente bloque conserva el **prompt operativo histórico v1**, no una reconstrucción del pedido para programarlo. Corresponde a la versión preservada desde `aed9d9a`; su uso inicial está documentado en [validación inicial del Tramposo](agente/validacion_caso_tramposo.md) y posteriormente en [calibracion.md](calibracion.md). El [system prompt operativo actual](agente/system_prompt.md) usa `evaluate_tool.py` para invocar el motor determinístico; no revierte DEC-015.
 
 Se preserva literalmente, incluidas sus notas históricas de v1 sobre calibración y README estándar. La calibración de los tres casos ya se realizó; la plantilla de este README fue informada posteriormente por el docente a través de la coordinación. Esta transcripción no actualiza el contrato funcional del agente.
 
@@ -685,13 +687,14 @@ Según [calibracion.md](calibracion.md), se cargó el prompt operativo del corre
 
 ### Entregables completos y evidencia
 
-Las cuatro piezas obligatorias están completas e integradas en `main`, con las limitaciones detalladas en el apartado siguiente:
+Las cuatro piezas obligatorias iniciales y el motor determinístico están integrados en `main`; el System Prompt operativo fue **VALIDADO** end-to-end en `feat/system-prompt-agent` por las rutas ZIP y GitHub, y queda pendiente de merge. La evidencia está en [docs/validacion_system_prompt.md](docs/validacion_system_prompt.md). Las limitaciones se detallan en el apartado siguiente:
 
 | Pieza | Qué contiene y qué se comprobó | Evidencia |
 |---|---|---|
 | Rúbrica ejecutable V2 | Cinco dimensiones: Sistema completo y funcionando (30), Proceso documentado (25), Formato y reproducibilidad (15), Análisis económico (15) y Gobierno y riesgo (15). Cada dimensión tiene cinco niveles, evidencia y ejemplos. | [rubrica.md](rubrica.md), PRs #6 y #8 |
-| Runtime determinístico final | Recupera un repositorio público por URL, fija su SHA, extrae evidencia observable, aplica el contrato de la rúbrica sin modelo generativo y produce el resultado estructurado en Streamlit. | [app.py](app.py), [src/](src/), DEC-015, PR #31 |
-| Corrector v1 histórico | Contrato de lectura, contraste de evidencia, puntuación y JSON fijo que antecedió al runtime final. La validación manual inicial conserva una salida completa. | [agente/README.md](agente/README.md), [system prompt](agente/system_prompt.md), [validación inicial](agente/validacion_caso_tramposo.md), PR #14 |
+| Runtime determinístico final | Streamlit invoca directamente `evaluator_engine`, que recupera un repositorio público por URL, fija su SHA, extrae evidencia observable y produce el resultado estructurado sin modelo generativo. | [app.py](app.py), [src/](src/), DEC-015, PR #31 |
+| Agente corrector operativo | Un agente con workspace y terminal recibe [system_prompt.md](agente/system_prompt.md), invoca [evaluate_tool.py](agente/evaluate_tool.py) y devuelve sin alterarlo el `EvaluationResult` del mismo motor determinístico. No funciona en un chat genérico sin herramienta local. | [agente/README.md](agente/README.md), [system prompt](agente/system_prompt.md), `9527ede`, `93468d` |
+| Corrector v1 histórico | Contrato de lectura, contraste de evidencia, puntuación y JSON fijo que antecedió al runtime final. La validación manual inicial conserva una salida completa. | [validación inicial](agente/validacion_caso_tramposo.md), PR #14, historial Git |
 | Tres casos de prueba | Excelente fuerte con limitaciones; flojo incompleto y evaluable; tramposo con declaraciones infladas que el corrector contrastó con los artefactos. | [excelente](casos/excelente/), [flojo](casos/flojo/), [tramposo](casos/tramposo/), PRs #11 y #15 |
 | Calibración humano/agente | Comparación de los tres casos por las cinco dimensiones, evidencias, desacuerdos y limitaciones conservados. | [calibracion.md](calibracion.md), PR #16 |
 
@@ -713,17 +716,15 @@ La validación inicial contra Tramposo documenta diferencias entre README, imple
 
 No se solicitan API keys ni se efectúan llamadas a proveedores generativos durante la evaluación. La disponibilidad depende de GitHub, de la red y del entorno de hosting.
 
-### Uso histórico del corrector v1
+### Uso actual del agente corrector
 
-1. Cargar el contenido completo de [agente/system_prompt.md](agente/system_prompt.md) en una herramienta de IA compatible con instrucciones de sistema y acceso real de lectura al repositorio.
-2. Proporcionar el contenido completo de la **rúbrica autoritativa de este repositorio**, [rubrica.md](rubrica.md), como artefacto separado.
-3. Indicar el repositorio objetivo mediante URL o ruta y su rama o commit. Una rúbrica encontrada dentro del objetivo no reemplaza la del evaluador.
-4. El corrector confirma acceso, inventaría e inspecciona el objetivo. Contrasta documentación, prompts, código, tests, corridas y outputs cuando existan.
-5. Revisar el JSON: cinco dimensiones con `dimension`, `weight`, `level_percent`, `score`, `evidence`, `justification` y `missing_for_next_level`; incluye `final_score` y exactamente una `concrete_improvement`.
+En un entorno con checkout del proyecto, terminal y acceso a la herramienta local, el agente ejecuta una sola vez `python agente/evaluate_tool.py --github "<URL>"` o `python agente/evaluate_tool.py --zip "<PATH>"`. La herramienta reutiliza `evaluator_engine`, conserva la revisión SHA o la huella del ZIP y devuelve el `EvaluationResult` estructurado. El LLM lo retransmite sin recalcular puntajes, completar evidencia ni agregar opinión.
 
-El contrato conserva las mismas claves, identificación de la revisión, estado de evaluación y notas de integridad. En 100%, `missing_for_next_level` es `null`. Si no puede acceder a la rúbrica o al objetivo en absoluto, prescribe `evaluation_status: "access_error"` con puntajes `null`. Estos son comportamientos especificados por el contrato; no se presentan como pruebas adicionales realizadas en esta actualización.
+Esta vía no forma parte del runtime de Streamlit: la aplicación pública continúa llamando directamente a `evaluator_engine`, conserva ejecución determinística, **0 tokens generativos** y **USD 0 de API generativa** por evaluación. Un ChatGPT o Claude genérico sin workspace, terminal y `evaluate_tool.py` no puede simular una evaluación real.
 
-La v1 se utilizaba mediante una herramienta de IA con capacidad de inspección; no tenía una CLI ni una API propia. Se preserva como evidencia del proceso y su procedimiento completo está en [agente/README.md](agente/README.md).
+La ruta operativa se validó end-to-end con un ZIP y con un repositorio GitHub fijado a SHA: en ambos casos el agente invocó una sola vez `evaluate_tool` y devolvió un `EvaluationResult` semánticamente idéntico a la ejecución directa. Ver [validación end-to-end del System Prompt](docs/validacion_system_prompt.md).
+
+La v1 se utilizaba mediante una herramienta de IA con capacidad de inspección y no tenía una CLI propia. Se preserva como evidencia del proceso; las pruebas y la calibración evidenciaron variabilidad y DEC-015 operacionalizó el scoring mediante un motor determinístico. La ruta actual del System Prompt usa ese motor como herramienta y no revierte esa decisión.
 
 ### Casos y resultados observados
 
@@ -808,7 +809,7 @@ La jerarquía es: consigna oficial del parcial → consigna/rúbrica oficial del
 
 Las limitaciones anteriores describen la primera calibración y están respaldadas por [calibracion.md](calibracion.md), [agente/README.md](agente/README.md) y [DECISIONES.md](DECISIONES.md). El re-test de aquella calibración histórica no se recreó retroactivamente; la validación posterior del motor es un ciclo separado, trazado mediante el contrato sintético y las pruebas de aceptación.
 
-Las cuatro piezas están integradas. Persisten límites reales: disponibilidad de GitHub, red y hosting; heurísticas determinísticas que pueden requerir corrección ante un bug objetivo nuevo; y la ausencia de inmunidad absoluta frente a prompt injection. El contenido del repositorio se trata como datos, no como instrucciones, y las señales de manipulación se reportan como contradicciones o invalidaciones cuando la evidencia lo justifica.
+Las cuatro piezas iniciales y el motor determinístico están integrados en `main`. La vía operativa del System Prompt en `feat/system-prompt-agent` fue **VALIDADA** end-to-end por ZIP y GitHub real; requiere agente con workspace, terminal y herramienta local, y queda pendiente de merge. Persisten límites reales: disponibilidad de GitHub, red y hosting; heurísticas determinísticas que pueden requerir corrección ante un bug objetivo nuevo; y la ausencia de inmunidad absoluta frente a prompt injection. El contenido del repositorio se trata como datos, no como instrucciones, y las señales de manipulación se reportan como contradicciones o invalidaciones cuando la evidencia lo justifica.
 
 ## Qué aprendí
 
