@@ -151,6 +151,21 @@ Problema: el formato impedía revisión. Cambio: se actualizó prompts/user_prom
 """
         self.assertEqual(level(contents, 1), 100)
 
+    def test_d2_14_single_complete_decision_history_is_100(self):
+        contents = structure()
+        contents["src/agent.ts"] = real_code()
+        for run in ("run-1", "run-2", "run-3"):
+            add_complete_run(contents, run)
+        contents["DECISIONES.md"] = """## Decisión integral de corrección
+Contexto inicial: prompts/system_prompt.md omitía campos obligatorios y la primera salida no podía verificarse.
+Decisión: se definió un esquema JSON y se actualizó src/agent.ts para validarlo.
+Motivo: conservar evidencia observable y evitar publicar resultados incompletos.
+Falla encontrada: la corrida run-1 falló porque no registraba fecha en corridas/run-1/metadata.json.
+Iteración y corrección posterior: se agregó metadata verificable en corridas/run-2/metadata.json y se revisó prompts/user_prompt.md.
+Impacto y resultado: corridas/run-1/output.json y corridas/run-2/output.json permiten contrastar el cambio y reconstruir la trazabilidad completa.
+"""
+        self.assertEqual(level(contents, 1), 100)
+
     def test_a1_d2_complete_history_in_alternative_documentary_format_is_100(self):
         contents = structure()
         contents["src/agent.ts"] = real_code()
