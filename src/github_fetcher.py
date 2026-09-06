@@ -67,7 +67,7 @@ def _merged_config(overrides: Optional[dict] = None) -> dict:
     return config
 
 
-def parse_github_url(url: str) -> Tuple[str, str, str, str]:
+def parse_github_url(url: str) -> Tuple[str, str, Optional[str], str]:
     """Retorna owner, repo, referencia solicitada y subruta para URLs GitHub usuales."""
     cleaned = url.strip().rstrip("/")
     if cleaned.endswith(".git"):
@@ -79,7 +79,7 @@ def parse_github_url(url: str) -> Tuple[str, str, str, str]:
     if len(parts) < 2:
         raise ValueError(f"URL de GitHub no válida: {url}")
     owner, repo = parts[:2]
-    revision, subpath = "main", ""
+    revision, subpath = None, ""
     if len(parts) >= 4 and parts[2] == "tree":
         revision, subpath = parts[3], "/".join(parts[4:])
     elif len(parts) >= 4 and parts[2] == "commit":
@@ -324,20 +324,36 @@ def _coverage(records: Iterable[dict], loaded_paths: set, label: Optional[str] =
 
 
 def _resolve_revision(owner: str, repo: str, requested_revision: str) -> Tuple[str, str]:
-    candidates = [requested_revision] + (["master"] if requested_revision == "main" else [])
-    for candidate in candidates:
-        response = requests.get(f"https://api.github.com/repos/{owner}/{repo}/commits/{quote(candidate, safe='')}", timeout=10)
-        if response.status_code == 200:
-            sha = response.json().get("sha")
-            if sha:
-                return candidate, sha
+    response = requests.get(
+        f"https://api.github.com/repos/{owner}/{repo}/commits/{quote(requested_revision, safe='')}",
+        timeout=10,
+    )
+    if response.status_code == 200:
+        sha = response.json().get("sha")
+        if sha:
+            return requested_revision, sha
     raise RuntimeError(f"No se pudo resolver la referencia '{requested_revision}' en {owner}/{repo}.")
+
+
+def _get_default_branch(owner: str, repo: str) -> str:
+    response = requests.get(f"https://api.github.com/repos/{owner}/{repo}", timeout=10)
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"No se pudo consultar la metadata de {owner}/{repo} para obtener la rama por defecto "
+            f"(HTTP {response.status_code})."
+        )
+    default_branch = response.json().get("default_branch")
+    if not isinstance(default_branch, str) or not default_branch.strip():
+        raise RuntimeError(f"La metadata de {owner}/{repo} no informa una rama por defecto válida.")
+    return default_branch.strip()
 
 
 def fetch_repository_data(github_url: str, revision: Optional[str] = None, retrieval_config: Optional[dict] = None) -> dict:
     """Descarga branch, tag o SHA y recupera evidencia con cobertura balanceada."""
     owner, repo, url_revision, subpath = parse_github_url(github_url)
-    requested_revision = revision or url_revision
+    requested_revision = revision if revision is not None else url_revision
+    if not requested_revision:
+        requested_revision = _get_default_branch(owner, repo)
     resolved_ref, commit_sha = _resolve_revision(owner, repo, requested_revision)
     response = requests.get(f"https://api.github.com/repos/{owner}/{repo}/zipball/{commit_sha}", timeout=30)
     if response.status_code != 200:
