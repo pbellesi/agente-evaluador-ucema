@@ -2,20 +2,18 @@
 
 ## Fecha de actualización
 
-Estado técnico verificado en `main` (`8b11d81`), sincronizado con `origin/main`.
+El motor integrado en `main` permanece congelado. La vía operativa del agente se encuentra en la rama `feat/system-prompt-agent`, pendiente de prueba end-to-end y merge.
 
 ## Fase actual
 
-Cierre de entrega: motor final integrado y congelado, con las cuatro piezas obligatorias preservadas y validación posterior documentada.
-
-La versión integrada en `main` incluye el motor determinístico validado por PR #31. No hay trabajo funcional pendiente.
+Cierre de entrega: motor final integrado y congelado, con la vía operativa del System Prompt preparada para integrarse sin alterar Streamlit ni scoring.
 
 ## Equipo y responsables
 
 | Rol | Responsable | Alcance principal |
 |---|---|---|
 | A | Pablo Bellesi | Coordinación e integración del avance |
-| B | Diego Mendez | Integración técnica; agente corrector v1 completado |
+| B | Diego Mendez | Integración técnica; agente corrector v1 preservado y System Prompt operativo preparado |
 | C | Franco Gambini | Rúbrica ejecutable completada; disponible para consulta |
 | D | Sofia Mapelli | Casos excelente y flojo completados |
 | E | Franco Forziati | Caso adversarial / tramposo completado; disponible para consulta |
@@ -25,7 +23,9 @@ La versión integrada en `main` incluye el motor determinístico validado por PR
 
 - Repositorio público, estructura obligatoria, fuentes, roles, reglas operativas y `.gitignore` disponibles.
 - Rúbrica ejecutable V2 completa en `rubrica.md`; cinco niveles como convención del equipo.
-- Agente corrector v1 integrado en `agente/`, con contrato JSON y validación inicial contra Tramposo.
+- Agente corrector v1 preservado en `agente/`, con contrato JSON y validación inicial contra Tramposo.
+- `agente/evaluate_tool.py` implementado y `agente/system_prompt.md` operacionalizado: un agente con workspace y terminal puede invocar el mismo `evaluator_engine`; Streamlit y scoring no cambiaron.
+- Validación de esta implementación: 115/115 pruebas verdes.
 - Runtime final determinístico integrado en `src/` y expuesto por `app.py`: no usa APIs generativas, registra la revisión SHA evaluada y trata el contenido objetivo como evidencia.
 - Los tres casos completos e integrados: excelente, flojo y tramposo.
 - Calibración humano/agente realizada y registrada en `calibracion.md`, con desacuerdos y limitaciones de trazabilidad explícitos.
@@ -48,13 +48,13 @@ La versión integrada en `main` incluye el motor determinístico validado por PR
 
 ## En curso
 
-- Cierre documental y revisión de presentación; no incorpora cambios funcionales.
+- Integración de la vía operativa del System Prompt desde `feat/system-prompt-agent`; no altera el motor, scoring ni Streamlit.
 
 ## Pendiente inmediato
 
-- Limpieza final de la interfaz Streamlit.
-- Revisión de despliegue y documentación de uso.
-- Preparación de defensa y entrega; la publicación en el campus no está acreditada por GitHub.
+- Prueba real end-to-end del agente con `evaluate_tool` en un entorno con workspace y terminal.
+- Merge de `feat/system-prompt-agent`.
+- Revisión de despliegue/documentación y preparación de defensa/entrega; la publicación en el campus no está acreditada por GitHub.
 
 ## Bloqueos / inconsistencias conocidas
 
@@ -64,8 +64,8 @@ La versión integrada en `main` incluye el motor determinístico validado por PR
 
 ## Próximo milestone
 
-Entrega documentalmente consistente, con motor congelado, revisión de despliegue completada y enlace presentado en el campus.
+Entrega documentalmente consistente, con motor congelado, prueba end-to-end del agente completada, revisión de despliegue y enlace presentado en el campus.
 
 ## Próximo paso
 
-Completar limpieza final de UI, revisar despliegue/documentación y preparar defensa/entrega.
+Ejecutar la prueba end-to-end del agente con herramienta y completar el merge de `feat/system-prompt-agent`.

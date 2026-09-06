@@ -242,4 +242,16 @@ Las acciones fueron solicitadas y validadas por el coordinador. Codex no tomó d
 **Consecuencia:** El motor queda congelado salvo evidencia de un bug objetivo nuevo, que deberá seguir el mismo recorrido sintético antes de modificar implementación, scoring, gates, rúbrica o casos.<br>
 **Evidencia / archivos relacionados:** `rubrica.md`; `tests/test_acceptance_matrix.py`; `src/evidence_extractor.py`; `src/deterministic_evaluator.py`; PR #31, merge `8b11d81`.<br>
 
+## DEC-018 — System Prompt operativo sobre herramienta determinística
+
+**Estado:** Vigente<br>
+**Responsable / participantes:** Pablo Bellesi, coordinación y validación de integración; Diego Mendez, integración técnica del agente corrector.<br>
+**IA utilizada:** Codex, para implementación acotada, documentación y ejecución de pruebas bajo instrucciones humanas.<br>
+**Contexto:** La consigna exige un system prompt más las herramientas necesarias. El motor determinístico ya realizaba la corrección funcional, pero `agente/system_prompt.md` no participaba de una vía operativa actual.<br>
+**Decisión:** Exponer `evaluator_engine` mediante `agente/evaluate_tool.py` y definir `agente/system_prompt.md` como orquestador de esa herramienta. La herramienta devuelve el `EvaluationResult` del motor sin duplicar scoring; el LLM no recalcula ni modifica puntajes o evidencia.<br>
+**Razones:** Alinear literalmente la arquitectura con la consigna, preservar el determinismo, mantener una única fuente autoritativa de puntajes, no duplicar scoring y no introducir costo generativo en Streamlit.<br>
+**Alternativas descartadas:** Scorer LLM paralelo; reemplazar el motor por un LLM; insertar un LLM dentro del runtime Streamlit.<br>
+**Consecuencias:** El agente es ejecutable sólo en un entorno con workspace y terminal; un chat genérico sin herramientas no puede realizar una evaluación real. Streamlit permanece independiente y el scoring no cambia.<br>
+**Evidencia / archivos relacionados:** `agente/evaluate_tool.py`; `agente/system_prompt.md`; `agente/README.md`; commits `9527ede987eccfa9607fad818a8e2ee6b43e14e1` y `93468d713453f6293860005fbab220f840082b76`.<br>
+
 
