@@ -446,32 +446,66 @@ def _render_batch_dashboard(batch_results):
             continue
         canonical_name = summary["dimension_names"][index]
         label = f"D{index + 1} · {canonical_name}" if canonical_name else f"D{index + 1}"
-        chart_rows.append({"dimensión": label, "promedio": round(average, 2), "orden": index + 1})
+        rounded_average = round(average, 2)
+        chart_rows.append(
+            {
+                "dimensión": label,
+                "promedio": rounded_average,
+                "etiqueta": f"{rounded_average:.1f}",
+                "posición_etiqueta": min(rounded_average + 3, 98),
+                "orden": index + 1,
+            }
+        )
 
     if chart_rows:
         st.subheader("Promedio por dimensión")
         st.vega_lite_chart(
             chart_rows,
             {
-                "mark": {"type": "bar", "color": "#9F1239", "cornerRadiusEnd": 3},
-                "encoding": {
-                    "x": {
-                        "field": "dimensión",
-                        "type": "nominal",
-                        "sort": {"field": "orden", "order": "ascending"},
-                        "title": None,
+                "layer": [
+                    {
+                        "mark": {"type": "bar", "color": "#9F1239", "cornerRadiusEnd": 3},
+                        "encoding": {
+                            "x": {
+                                "field": "dimensión",
+                                "type": "nominal",
+                                "sort": {"field": "orden", "order": "ascending"},
+                                "title": None,
+                            },
+                            "y": {
+                                "field": "promedio",
+                                "type": "quantitative",
+                                "scale": {"domain": [0, 100]},
+                                "title": "Promedio (%)",
+                            },
+                            "tooltip": [
+                                {"field": "dimensión", "type": "nominal", "title": "Dimensión"},
+                                {"field": "promedio", "type": "quantitative", "title": "Promedio (%)"},
+                            ],
+                        },
                     },
-                    "y": {
-                        "field": "promedio",
-                        "type": "quantitative",
-                        "scale": {"domain": [0, 100]},
-                        "title": "Promedio (%)",
+                    {
+                        "mark": {
+                            "type": "text",
+                            "color": "#F8FAFC",
+                            "fontWeight": 700,
+                            "baseline": "bottom",
+                        },
+                        "encoding": {
+                            "x": {
+                                "field": "dimensión",
+                                "type": "nominal",
+                                "sort": {"field": "orden", "order": "ascending"},
+                            },
+                            "y": {
+                                "field": "posición_etiqueta",
+                                "type": "quantitative",
+                                "scale": {"domain": [0, 100]},
+                            },
+                            "text": {"field": "etiqueta", "type": "nominal"},
+                        },
                     },
-                    "tooltip": [
-                        {"field": "dimensión", "type": "nominal", "title": "Dimensión"},
-                        {"field": "promedio", "type": "quantitative", "title": "Promedio (%)"},
-                    ],
-                },
+                ],
                 "height": 260,
             },
             use_container_width=True,
