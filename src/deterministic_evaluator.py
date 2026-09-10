@@ -42,6 +42,11 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         ev1 = ev["found_dummies"]
         just1 = "Existe un intento de código/script, pero contiene conectores o funciones dummy/simuladas que no procesan ni envían datos a un conector o herramienta real."
         missing1 = "Demostrar la invocación efectiva de un conector o herramienta real sin simulación."
+    elif ev.get("run_input_output_inconsistency_count", 0) > 0:
+        lvl1 = 50
+        ev1 = ["Las corridas estructuradas contienen entradas y salidas incompatibles"]
+        just1 = "El código invoca una herramienta, pero las salidas observadas no son coherentes con los identificadores de entrada y no demuestran procesamiento correcto de casos reales."
+        missing1 = "Conservar corridas cuya salida estructurada pueda vincularse inequívocamente con la entrada procesada."
     elif ev["system_type"] == "rule_based_local" and ev["corrida_count"] < 1:
         lvl1 = 25
         ev1 = [f"Código ejecutable en {f}" for f in ev["code_files"][:3]]
@@ -294,6 +299,11 @@ def evaluate_repository_deterministically(repo_data: dict) -> EvaluationResult:
         else:
             just5 = "No se encontró documentación de gobierno y riesgo ni mención de controles de seguridad."
             missing5 = "Crear el archivo docs/gobierno_riesgo.md detallando sistemas, permisos, fallas y supervisión."
+    elif ev.get("governance_execution_contradiction_count", 0) > 0:
+        lvl5 = 50 if operational_axes_count > 0 else 25
+        ev5 = [c for c in ev["contradictions"] if "gobierno" in c.lower()]
+        just5 = "La política de supervisión está documentada, pero una corrida observable contradice su aplicación; la evidencia favorable de ese control no es válida."
+        missing5 = "Alinear las salidas de corrida con las condiciones documentadas de revisión o aprobación humana."
     elif operational_axes_count >= 5 and not any("gobierno" in c for c in ev["contradictions"]):
         lvl5 = 100
         ev5 = ["Todos los 5 ejes de gobierno identificados (permisos, fallas, respuesta, supervisión y firma/responsable) sin contradicciones"]

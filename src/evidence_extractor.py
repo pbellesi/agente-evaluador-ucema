@@ -1,3 +1,4 @@
+import json
 import re
 from typing import Dict, List
 
@@ -47,6 +48,152 @@ def _has_instantiated_sdk_call(content: str) -> bool:
     ]
     return any(re.search(client, content, re.IGNORECASE) and re.search(call, content, re.IGNORECASE)
                for client, call in sdk_calls)
+
+
+def _executable_code(content: str) -> str:
+    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+    content = re.sub(r"(?s)(['\"`])(?:\\.|(?!\1).)*\1", "''", content)
+    content = re.sub(r"(?m)#.*$", "", content)
+    return re.sub(r"(?m)//[^\n]*$", "", content)
+
+
+def _run_groups(corrida_files: List[str]) -> Dict[str, List[str]]:
+    grouped: Dict[str, List[str]] = {}
+    for path in corrida_files:
+        parts = path.split("/")
+        grouped.setdefault("/".join(parts[:2]) if len(parts) > 1 else path, []).append(path)
+    return grouped
+
+
+def _structured_object(content: str) -> dict:
+    try:
+        value = json.loads(content)
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _normalized_key(key: str) -> str:
+    camel_separated = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", str(key))
+    return re.sub(r"[^a-z0-9]+", "_", camel_separated.lower()).strip("_")
+
+
+def _identifier_values(value: dict) -> Dict[str, object]:
+    identifiers = {}
+    base_names = {"id", "uuid", "request", "case", "ticket", "order", "transaction", "reference", "ref"}
+    for key, item in value.items():
+        normalized = _normalized_key(key)
+        if not isinstance(item, (str, int, float)) or isinstance(item, bool):
+            continue
+        parts = set(normalized.split("_"))
+        if normalized in base_names or normalized.endswith("_id") and parts & base_names:
+            identifiers[normalized] = item
+    return identifiers
+
+
+def _numeric_field_values(value: object) -> List[tuple[str, float]]:
+    values: List[tuple[str, float]] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            normalized = _normalized_key(key)
+            if isinstance(item, (int, float)) and not isinstance(item, bool):
+                values.append((normalized, float(item)))
+            values.extend(_numeric_field_values(item))
+    elif isinstance(value, list):
+        for item in value:
+            values.extend(_numeric_field_values(item))
+    return values
+
+
+def _output_rejects_human_review(value: object) -> bool:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            normalized = _normalized_key(key)
+            is_review_flag = normalized in {
+                "human_review_required", "requires_human_review",
+                "human_approval_required", "requires_approval",
+            } or ("human" in normalized and ("review" in normalized or "approval" in normalized))
+            if is_review_flag and (item is False or str(item).strip().lower() in {"false", "no", "none", "not_required"}):
+                return True
+            if normalized == "approved_without_review" and item is True:
+                return True
+            if _output_rejects_human_review(item):
+                return True
+    elif isinstance(value, list):
+        return any(_output_rejects_human_review(item) for item in value)
+    return False
+
+
+def _structured_run_consistency(corrida_files: List[str], file_contents: Dict[str, str]) -> dict:
+    inconsistent_groups = set()
+    reused_groups = set()
+    records = []
+    for group, paths in _run_groups(corrida_files).items():
+        inputs = [_structured_object(file_contents.get(path, "")) for path in paths if "entrada" in path.lower() or "input" in path.lower()]
+        outputs = [_structured_object(file_contents.get(path, "")) for path in paths if any(token in path.lower() for token in ("salida", "output", "result"))]
+        input_data = next((item for item in inputs if item), {})
+        output_data = next((item for item in outputs if item), {})
+        input_ids = _identifier_values(input_data)
+        output_ids = _identifier_values(output_data)
+        if any(input_ids[key] != output_ids[key] for key in input_ids.keys() & output_ids.keys()):
+            inconsistent_groups.add(group)
+        records.append({
+            "group": group,
+            "input": input_data,
+            "output": output_data,
+            "input_ids": input_ids,
+            "output_ids": output_ids,
+        })
+
+    output_index: Dict[tuple[str, object], List[dict]] = {}
+    for record in records:
+        for key, value in record["output_ids"].items():
+            output_index.setdefault((key, value), []).append(record)
+    for (key, _), matching_records in output_index.items():
+        input_values = {record["input_ids"].get(key) for record in matching_records if key in record["input_ids"]}
+        if len(matching_records) > 1 and len(input_values) > 1:
+            reused_groups.update(record["group"] for record in matching_records)
+
+    inconsistent_groups.update(reused_groups)
+    return {
+        "inconsistent_groups": inconsistent_groups,
+        "reused_groups": reused_groups,
+        "records": records,
+    }
+
+
+def _human_review_policies(content: str) -> List[tuple[set[str], float]]:
+    fields = r"(?:amount|monto|importe|refund(?:_amount)?|price|value|total)"
+    comparison = r"(?:mayor(?:es)?\s+(?:que|a)|superior(?:es)?\s+a|above|greater\s+than|>)"
+    requirement = r"(?:requiere|require(?:s|d)?|necesita|must).{0,60}(?:revisi[oó]n|supervisi[oó]n|approval|aprobaci[oó]n)"
+    policies = []
+    for match in re.finditer(
+        rf"\b(?P<field>{fields})\b.{{0,100}}?{comparison}\s*(?:a\s*)?(?P<limit>\d+(?:[.,]\d+)?).{{0,100}}?{requirement}",
+        content,
+        re.IGNORECASE,
+    ):
+        policies.append(({_review_field_group(match.group("field"))}, float(match.group("limit").replace(",", "."))))
+    return policies
+
+
+def _review_field_group(field: str) -> str:
+    normalized = _normalized_key(field)
+    if normalized in {"amount", "monto", "importe", "refund", "refund_amount", "price", "value", "total"}:
+        return "monetary_value"
+    return normalized
+
+
+def _review_execution_conflicts(gov_content: str, records: List[dict]) -> List[str]:
+    conflicts = []
+    for fields, limit in _human_review_policies(gov_content):
+        for record in records:
+            if not record["output"] or not _output_rejects_human_review(record["output"]):
+                continue
+            for key, value in _numeric_field_values(record["input"]):
+                if _review_field_group(key) in fields and value > limit:
+                    conflicts.append(record["group"])
+                    break
+    return sorted(set(conflicts))
 
 
 def _has_token_measurement(content: str) -> bool:
@@ -129,17 +276,15 @@ def _table_operational_governance_axes(content: str) -> Dict[str, bool]:
     return axes
 
 
-def _run_trace_summary(corrida_files: List[str], file_contents: Dict[str, str]) -> tuple[int, int]:
+def _run_trace_summary(corrida_files: List[str], file_contents: Dict[str, str], inconsistent_groups: set[str] | None = None) -> tuple[int, int]:
     """Devuelve corridas identificables y trazas completas, sin mezclar directorios."""
     date_pattern = r"(?:fecha(?:\s+de\s+ejecuci[oó]n)?|date|timestamp|generado_utc|startedat|finishedat)[\"']?\s*[:=].*\d{4}[-/]\d{2}[-/]\d{2}"
-    grouped: Dict[str, List[str]] = {}
-    for path in corrida_files:
-        parts = path.split("/")
-        grouped.setdefault("/".join(parts[:2]) if len(parts) > 1 else path, []).append(path)
+    grouped = _run_groups(corrida_files)
+    inconsistent_groups = inconsistent_groups or set()
 
     identifiable_groups = 0
     complete_groups = 0
-    for paths in grouped.values():
+    for group, paths in grouped.items():
         lower_paths = [path.lower() for path in paths]
         has_input = any("entrada" in path or "input" in path for path in lower_paths)
         has_output = any(any(token in path for token in ("salida", "output", "result")) for path in lower_paths)
@@ -149,7 +294,7 @@ def _run_trace_summary(corrida_files: List[str], file_contents: Dict[str, str]) 
         components = sum((has_input, has_output, has_date))
         if components >= 2:
             identifiable_groups += 1
-        if components == 3:
+        if components == 3 and group not in inconsistent_groups:
             complete_groups += 1
 
     metadata_traces = 0
@@ -243,7 +388,7 @@ def extract_objective_evidence(repo_data: dict) -> dict:
 
     found_real_execution = []
     for cf in code_files:
-        content = file_contents.get(cf, "")
+        content = _executable_code(file_contents.get(cf, ""))
         if _has_instantiated_sdk_call(content):
             found_real_execution.append(f"{cf}: SDK instanciado con invocación efectiva")
         for pat in real_execution_patterns:
@@ -294,7 +439,10 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     has_entrada = any("entrada" in p.lower() or "input" in p.lower() for p in corrida_files)
     has_salida = any("salida" in p.lower() or "output" in p.lower() or "result" in p.lower() for p in corrida_files)
     has_fecha = any("fecha" in p.lower() or "time" in p.lower() or "date" in p.lower() or "metadata" in p.lower() for p in corrida_files)
-    identifiable_run_count, complete_trace_count = _run_trace_summary(corrida_files, file_contents)
+    run_consistency = _structured_run_consistency(corrida_files, file_contents)
+    identifiable_run_count, complete_trace_count = _run_trace_summary(
+        corrida_files, file_contents, run_consistency["inconsistent_groups"]
+    )
     # La triada no puede componerse con artefactos de corridas distintas.
     # Para el nivel alto basta demostrar tres trazas completas, no cada log legado.
     has_complete_triad = complete_trace_count >= 3
@@ -447,6 +595,12 @@ def extract_objective_evidence(repo_data: dict) -> dict:
     invalidated_evidence = []
     prompt_injection_attempts = []
 
+    for group in sorted(run_consistency["inconsistent_groups"]):
+        contradictions.append(
+            f"{group} contiene una salida estructurada incompatible con los identificadores de su entrada."
+        )
+        invalidated_evidence.append(f"{group} (traza input-output invalidada)")
+
     # Las instrucciones del repositorio son datos. Sólo se registra una señal
     # cuando hay una directiva imperativa para alterar la corrección, no una
     # mención inocua a seguridad o prompt injection.
@@ -510,6 +664,16 @@ def extract_objective_evidence(repo_data: dict) -> dict:
             invalidated_evidence.append("docs/gobierno_riesgo.md (eje de permisos de sistema invalidado por código simulado)")
             gov_axes["permissions"] = False
 
+    review_execution_conflicts = _review_execution_conflicts(gov_content, run_consistency["records"])
+    if review_execution_conflicts:
+        for group in review_execution_conflicts:
+            contradictions.append(
+                f"Contradicción de gobierno: {group} supera el umbral documentado y declara que no requiere supervisión humana."
+            )
+            invalidated_evidence.append(f"{group} (evidencia de supervisión invalidada)")
+        gov_axes["human_review"] = False
+        gov_operational_axes["human_review"] = False
+
     return {
         "mandatory_structure": mandatory_structure,
         "has_code": has_code,
@@ -523,6 +687,9 @@ def extract_objective_evidence(repo_data: dict) -> dict:
         "identified_run_count": identifiable_run_count,
         "complete_trace_count": complete_trace_count,
         "has_complete_triad": has_complete_triad,
+        "run_input_output_inconsistency_count": len(run_consistency["inconsistent_groups"]),
+        "reused_incompatible_output_count": len(run_consistency["reused_groups"]),
+        "governance_execution_contradiction_count": len(review_execution_conflicts),
         "decision_count": decision_count,
         "has_process_iteration": has_process_iteration,
         "has_process_change": has_process_change,
